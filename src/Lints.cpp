@@ -5,9 +5,20 @@
 #include <vector>
 #include <iterator>
 
-void libint2_init(){libint2::initialize();}
+std::string greet()
+{
+    return "hello, world";
+}
 
-void libint2_finalize(){libint2::finalize();}
+void libint2_init()
+{
+    libint2::initialize();
+}
+
+void libint2_finalize()
+{
+    libint2::finalize();
+}
 
 std::vector<libint2::Atom> get_atoms(std::string& inp)
 {
@@ -23,7 +34,7 @@ libint2::BasisSet make_basis(std::string bname, std::string fname)
     return obs;
 }
 
-libint2::Engine make_engine(libint2::Operator op, int max_nprim, int max_l) 
+libint2::Engine make_engine(libint2::Operator op, int max_nprim, int max_l)
 {
     libint2::Engine engine(op,max_nprim,max_l);
     return engine;
@@ -56,8 +67,7 @@ struct OverlapEngine
         this->engine = make_engine(libint2::Operator::overlap,max_nprim,max_l);
     }
     libint2::Engine engine;
-    auto compute(int s1, int s2, BasisSet& obs) { 
-        //compute a shell pair overlap
+    auto compute(int s1, int s2, BasisSet& obs) {
         const auto& buf_vec = this->engine.results();
         this->engine.compute(obs.basis[s1],obs.basis[s2]);
         auto n1 = obs.basis[s1].size();
@@ -95,10 +105,17 @@ struct OverlapEngine
     }
 };
 
+
+JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
+{
+    mod.method("greet",&greet);
+}
+
 JLCXX_MODULE Libint2(jlcxx::Module& mod)
 {
     mod.method("libint2_init",&libint2_init);
     mod.method("libint2_finalize",&libint2_finalize);
+    //mod.method("make_basis",&make_basis);
     mod.add_type<BasisSet>("BasisSet")
         .constructor<std::string&, std::string&>()
         .method("getsize",&BasisSet::getsize)
