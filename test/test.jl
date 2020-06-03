@@ -2,12 +2,14 @@ using Lints
 
 Lints.libint2_init()
 X = Lints.BasisSet("sto-3g","h2o.xyz")
+println(Lints.max_nprim(X),Lints.max_l(X))
 Y = Lints.OverlapEngine(Lints.max_nprim(X),Lints.max_l(X))
 s = Lints.getsize(Y,X)
 S = zeros(s,s)
 for _i=1:Lints.getsize(X), _j=_i:Lints.getsize(X)
     i = _i-1
     j = _j-1
+    println(i,j)
     sp = Lints.startpoint(Y,i,j,X) .+ 1
     chonk = Lints.chunk(Y,i,j,X) .- 1
     _chonk = chonk .+ 1
@@ -29,3 +31,4 @@ println(S)
 #end
 #println(unsafe_wrap(Array,reinterpret(Ptr{Float64},outp),3))
 #libint2_finalize()
+Lints.libint2_finalize()
