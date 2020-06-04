@@ -62,6 +62,3 @@ Scanning dependencies of target Lints
 [ 50%] Building CXX object CMakeFiles/Lints.dir/home/mmd01986/.julia/dev/Lints/src/Lints.cpp.o
 [100%] Linking CXX shared library lib/libLints.so
 [100%] Built target Lints
-┌ Warning: Parsing command "rm -rf CMakeCache.txt CMakeFiles lib/libLints.*". Special characters "#{}()[]<>|&*?~;" should now be quoted in commands
-│   caller = shell_parse(::String, ::Bool; special::String) at shell.jl:107
-└ @ Base ./shell.jl:107
