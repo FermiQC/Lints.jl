@@ -8,6 +8,10 @@ eig_inc  = joinpath(Eigen_jll.artifact_dir,"include/eigen3")
 
 run(`rm -rf CMakeCache.txt CMakeFiles lib/libLints."*"`)
 run(pipeline(`sed "s|JLLPATH|$path|g" _CMakeLists.txt`,`tee CMakeLists.txt`))
-run(`sed -i "s|EIGENPATH|$eig_inc|g" CMakeLists.txt`)
+if Sys.isapple()
+    run(`sed -i"" "s|EIGENPATH|$eig_inc|g" CMakeLists.txt`)
+else
+    run(`sed -i "s|EIGENPATH|$eig_inc|g" CMakeLists.txt`)
+end
 run(`cmake -DCMAKE_PREFIX_PATH=$pref .`)
 run(`cmake --build .`)
