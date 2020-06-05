@@ -1,6 +1,5 @@
 *cmake
-Makefile
-CMakeCache.txt
+*Makefile
+*CMakeCache.txt
 deps/CMakeFiles
-build/CMakeCache.txt
-build/CMakeFiles
+*log
