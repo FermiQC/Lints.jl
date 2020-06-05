@@ -6,4 +6,5 @@ using libint_jll
 function __init__()
     @initcxx
 end
+include("make_ND.jl")
 end # module
