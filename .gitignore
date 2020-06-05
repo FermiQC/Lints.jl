@@ -3,3 +3,5 @@
 *CMakeCache.txt
 deps/CMakeFiles
 *log
+deps/CMakeLists.txt
+deps/lib
