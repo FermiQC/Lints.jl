@@ -49,3 +49,4 @@ function make_4D(destination,engine,basis)
         I[r4,r3,r2,r1] .= permutedims(shell,[4,3,2,1])
         push!(donesies,[l,k,j,i])
     end
+end
