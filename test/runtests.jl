@@ -1,8 +1,9 @@
 using Lints
 using Test
+path = joinpath(dirname(pathof(Lints)),"..","test")
 
 Lints.libint2_init()
-mol = Lints.Molecule("h2o.xyz")
+mol = Lints.Molecule(joinpath(path,"h2o.xyz"))
 bas = Lints.BasisSet("sto-3g",mol)
 nprim = Lints.max_nprim(bas)
 l = Lints.max_l(bas)
@@ -49,10 +50,10 @@ for _i=1:sz,_j=1:sz,_k=1:sz,_l=1:sz
     r2 = sp[2]:chonk[2]+sp[2]
     r3 = sp[3]:chonk[3]+sp[3]
     r4 = sp[4]:chonk[4]+sp[4]
-    println("--")
-    println(size(I[r1,r2,r3,r4]))
-    println(size(permutedims(reshape(Lints.compute(eri,i,j,k,l,bas),Tuple(reverse(_chonk))),(4,3,2,1))))
-    println("--")
+    #println("--")
+    #println(size(I[r1,r2,r3,r4]))
+    #println(size(permutedims(reshape(Lints.compute(eri,i,j,k,l,bas),Tuple(reverse(_chonk))),(4,3,2,1))))
+    #println("--")
     shell = permutedims(reshape(Lints.compute(eri,i,j,k,l,bas),Tuple(reverse(_chonk))),(4,3,2,1))
     I[r1,r2,r3,r4] .= shell
     push!(donesies,[i,j,k,l])
@@ -82,15 +83,15 @@ end
 #                     """)
 #e,wfn = psi4.energy("hf/sto-3g",return_wfn=true)
 #mints = psi4.core.MintsHelper(wfn.basisset())
-println(S)
-#println(mints.ao_overlap().to_array())
-println("====")
-println(T)
-#println(mints.ao_kinetic().to_array())
-println("====")
-println(V)
-#println(mints.ao_potential().to_array())
-println("====")
-println(I)
-#println(mints.ao_eri().to_array())
+#println(S)
+##println(mints.ao_overlap().to_array())
+#println("====")
+#println(T)
+##println(mints.ao_kinetic().to_array())
+#println("====")
+#println(V)
+##println(mints.ao_potential().to_array())
+#println("====")
+#println(I)
+##println(mints.ao_eri().to_array())
 Lints.libint2_finalize()
