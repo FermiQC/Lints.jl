@@ -1,7 +1,5 @@
 using Lints
 using Test
-using PyCall
-psi4 = pyimport("psi4")
 
 Lints.libint2_init()
 mol = Lints.Molecule("h2o.xyz")
@@ -75,24 +73,24 @@ for _i=1:sz,_j=1:sz,_k=1:sz,_l=1:sz
 end
 @test true
 #println(I)
-psi4.core.be_quiet()
-mole = psi4.geometry("""
-                     H 0.0 -1.0 0.0
-                     H 0.0 1.0 0.0
-                     symmetry c1
-                     noreorient
-                     """)
-e,wfn = psi4.energy("hf/sto-3g",return_wfn=true)
-mints = psi4.core.MintsHelper(wfn.basisset())
+#psi4.core.be_quiet()
+#mole = psi4.geometry("""
+#                     H 0.0 -1.0 0.0
+#                     H 0.0 1.0 0.0
+#                     symmetry c1
+#                     noreorient
+#                     """)
+#e,wfn = psi4.energy("hf/sto-3g",return_wfn=true)
+#mints = psi4.core.MintsHelper(wfn.basisset())
 println(S)
-println(mints.ao_overlap().to_array())
+#println(mints.ao_overlap().to_array())
 println("====")
 println(T)
-println(mints.ao_kinetic().to_array())
+#println(mints.ao_kinetic().to_array())
 println("====")
 println(V)
-println(mints.ao_potential().to_array())
+#println(mints.ao_potential().to_array())
 println("====")
 println(I)
-println(mints.ao_eri().to_array())
+#println(mints.ao_eri().to_array())
 Lints.libint2_finalize()
