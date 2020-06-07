@@ -83,6 +83,12 @@ uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
+[[boost_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "4135c43c414bc32041148999f707f88544d810f2"
+uuid = "28df3c45-c428-5900-9ff8-a3135698ca75"
+version = "1.71.0+2"
+
 [[libcxxwrap_julia_jll]]
 deps = ["Libdl", "Pkg"]
 git-tree-sha1 = "b7594ea3040804e12eddebd977ec856ec0a17f19"
