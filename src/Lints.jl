@@ -6,5 +6,6 @@ using libint_jll
 function __init__()
     @initcxx
 end
+ENV["LIBINT_DATA_PATH"] = joinpath(dirname(pathof(Lints)),"../deps/lib/")
 include("make_ND.jl")
 end # module
