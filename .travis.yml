@@ -5,5 +5,4 @@ dist:
 os:
     - linux
 
-before_install:
-    script: ./scripts/pre-install.sh
+script: ./scripts/pre-install.sh
