@@ -14,19 +14,22 @@ V_engine = Lints.NuclearEngine(nprim,l,mol)
 eri = Lints.ERIEngine(nprim,l)
 println("here")
 
-s = Lints.getsize(S_engine,bas)
-println(s)
-S = zeros(s,s)
-T = zeros(s,s)
-V = zeros(s,s)
+s = Lints.getsize(bas)
+sz = Lints.getsize(S_engine,bas)
+println(sz)
+S = zeros(sz,sz)
+T = zeros(sz,sz)
+V = zeros(sz,sz)
+I = zeros(sz,sz,sz,sz)
+println(size(I))
 
-sz = s
 for _i=1:s, _j=_i:s
     i = _i-1
     j = _j-1
     sp = Lints.startpoint(S_engine,i,j,bas) .+ 1
     chonk = Lints.chunk(S_engine,i,j,bas) .- 1
     _chonk = chonk .+ 1
+    println("$i $j")
     r1 = sp[1]:chonk[1]+sp[1]
     r2 = sp[2]:chonk[2]+sp[2]
     S[r1,r2] .= reshape(Lints.compute(S_engine,i,j,bas),Tuple(_chonk))
@@ -36,9 +39,8 @@ for _i=1:s, _j=_i:s
     V[r1,r2] .= reshape(Lints.compute(V_engine,i,j,bas),Tuple(_chonk))
     V[r2,r1] .= transpose(V[r1,r2])
 end
-I = zeros(s,s,s,s)
 donesies = []
-for _i=1:sz,_j=1:sz,_k=1:sz,_l=1:sz
+for _i=1:s,_j=1:s,_k=1:s,_l=1:s
     i = _i - 1
     j = _j - 1
     k = _k - 1
