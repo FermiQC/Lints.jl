@@ -5,4 +5,5 @@ dist:
 os:
     - linux
 
-script: ./scripts/pre-install.sh
+before_install:
+    - eval "apt install gcc7 && CC=gcc-7 && CXX=g++-7"
