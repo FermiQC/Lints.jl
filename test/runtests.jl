@@ -3,25 +3,21 @@ using Test
 path = joinpath(dirname(pathof(Lints)),"..","test")
 
 Lints.libint2_init()
-mol = Lints.Molecule("h2o.xyz")
+mol = Lints.Molecule(joinpath(path,"h2o.xyz"))
 bas = Lints.BasisSet("sto-3g",mol)
 nprim = Lints.max_nprim(bas)
 l = Lints.max_l(bas)
-println(nprim,l)
 S_engine = Lints.OverlapEngine(nprim,l)
 T_engine = Lints.KineticEngine(nprim,l)
 V_engine = Lints.NuclearEngine(nprim,l,mol)
 eri = Lints.ERIEngine(nprim,l)
-println("here")
 
 s = Lints.getsize(bas)
 sz = Lints.getsize(S_engine,bas)
-println(sz)
 S = zeros(sz,sz)
 T = zeros(sz,sz)
 V = zeros(sz,sz)
 I = zeros(sz,sz,sz,sz)
-println(size(I))
 
 for _i=1:s, _j=_i:s
     i = _i-1
@@ -29,7 +25,6 @@ for _i=1:s, _j=_i:s
     sp = Lints.startpoint(S_engine,i,j,bas) .+ 1
     chonk = Lints.chunk(S_engine,i,j,bas) .- 1
     _chonk = chonk .+ 1
-    println("$i $j")
     r1 = sp[1]:chonk[1]+sp[1]
     r2 = sp[2]:chonk[2]+sp[2]
     S[r1,r2] .= reshape(Lints.compute(S_engine,i,j,bas),Tuple(_chonk))
