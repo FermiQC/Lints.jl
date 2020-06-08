@@ -2,10 +2,8 @@ language: julia
 
 dist:
     - xenial
-    - bionic
 os:
     - linux
-    - osx
 
 before_install:
-    - eval "sudo apt-get install gcc"
+    script: ./scripts/pre-install.sh
