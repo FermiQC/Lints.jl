@@ -6,4 +6,5 @@ os:
     - linux
 
 before_install:
-    - eval "apt install gcc7 && CC=gcc-7 && CXX=g++-7"
+    - sudo apt-get -y install gcc7
+    - eval "CC=gcc-7 && CXX=g++-7"
