@@ -1,2 +1,11 @@
 language: julia
-dist: bionic
+
+dist:
+    - xenial
+    - bionic
+os:
+    - linux
+    - osx
+
+before_install:
+    - eval "sudo apt-get install gcc"
