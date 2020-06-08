@@ -1,1 +1,2 @@
 language: julia
+dist: bionic
