@@ -5,9 +5,9 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[CxxWrap]]
 deps = ["Libdl", "MacroTools", "libcxxwrap_julia_jll"]
-git-tree-sha1 = "8c3ab907e1cdf3b3e5fa4e83a768db41034f8d2b"
+git-tree-sha1 = "b400a0b5de176906388fc0c56dd93c5383049217"
 uuid = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
-version = "0.10.1"
+version = "0.10.2"
 
 [[Dates]]
 deps = ["Printf"]
