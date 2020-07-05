@@ -1,7 +1,12 @@
 language: julia
 
+arch:
+    - amd64
+    - arch64
 dist:
     - bionic
+    - xenial
+    - focal
 os:
     - linux
     - osx
