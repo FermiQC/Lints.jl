@@ -13,4 +13,5 @@ boost_jll = "28df3c45-c428-5900-9ff8-a3135698ca75"
 libint_jll = "5fdff7f3-485e-5122-bc58-379aa217adcc"
 
 [compat]
+julia = "1"
 CxxWrap = "0.11"
