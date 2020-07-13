@@ -1,17 +1,18 @@
 name = "Lints"
 uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
 authors = ["MattDavis <matthew.davis010@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 Eigen_jll = "bc6bbf8a-a594-5541-9c57-10b0d0312c70"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 boost_jll = "28df3c45-c428-5900-9ff8-a3135698ca75"
 libint_jll = "5fdff7f3-485e-5122-bc58-379aa217adcc"
 
 [compat]
-julia = "1"
 CxxWrap = "0.11"
+julia = "1"
