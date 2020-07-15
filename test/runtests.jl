@@ -8,7 +8,7 @@ path = joinpath(dirname(pathof(Lints)),"..","test")
 Lints.libint2_init()
 mol = Lints.Molecule(joinpath(path,"h2o.xyz"))
 
-bas = Lints.BasisSet("cc-pvtz",mol)
+bas = Lints.BasisSet("6-31G*",mol)
 nprim = Lints.max_nprim(bas)
 l = Lints.max_l(bas)
 S_engine = Lints.OverlapEngine(nprim,l)
