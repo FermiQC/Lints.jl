@@ -8,8 +8,10 @@ function make_2D(destination,engine,basis)
         _chonk = chonk .+ 1
         r1 = sp[1]:chonk[1]+sp[1]
         r2 = sp[2]:chonk[2]+sp[2]
-        destination[r1,r2] .= reshape(Lints.compute(engine,i,j,basis),Tuple(_chonk))
-        destination[r2,r1] .= transpose(destination[r1,r2])
+        #destination[r1,r2] .= permutedims(reshape(Lints.compute(engine,i,j,basis),Tuple(reverse(_chonk))),(2,1))
+        #destination[r2,r1] .= transpose(destination[r1,r2])
+        destination[r2,r1] .= reshape(Lints.compute(engine,i,j,basis),Tuple(reverse(_chonk)))
+        destination[r1,r2] .= transpose(destination[r2,r1])
     end
 end
 
