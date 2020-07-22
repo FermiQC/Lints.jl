@@ -3,14 +3,14 @@ function make_2D(destination,engine,basis)
     for _i=1:s, _j=_i:s
         i = _i-1
         j = _j-1
-        sp = Lints.startpoint(engine,i,j,basis) .+ 1
-        chonk = Lints.chunk(engine,i,j,basis) .- 1
+        sp = Lints.startpoint(engine,i,j,basis,basis) .+ 1
+        chonk = Lints.chunk(engine,i,j,basis,basis) .- 1
         _chonk = chonk .+ 1
         r1 = sp[1]:chonk[1]+sp[1]
         r2 = sp[2]:chonk[2]+sp[2]
         #destination[r1,r2] .= permutedims(reshape(Lints.compute(engine,i,j,basis),Tuple(reverse(_chonk))),(2,1))
         #destination[r2,r1] .= transpose(destination[r1,r2])
-        destination[r2,r1] .= reshape(Lints.compute(engine,i,j,basis),Tuple(reverse(_chonk)))
+        destination[r2,r1] .= reshape(Lints.compute(engine,i,j,basis,basis),Tuple(reverse(_chonk)))
         destination[r1,r2] .= transpose(destination[r2,r1])
     end
 end

@@ -129,11 +129,11 @@ struct OverlapEngine
         this->engine = make_engine(libint2::Operator::overlap,max_nprim,max_l);
     }
     libint2::Engine engine;
-    auto compute(int s1, int s2, BasisSet& obs) {
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2]);
-        auto n1 = obs.basis[s1].size();
-        auto n2 = obs.basis[s2].size();
+        this->engine.compute(obs1.basis[s1],obs1.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
         jlcxx::Array<double> ints;
         for(auto f1=0; f1<n1; ++f1)
@@ -148,17 +148,18 @@ struct OverlapEngine
         }
         return d1;
     }
-    auto chunk(int s1, int s2, BasisSet& obs) {
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
-        dims.push_back(obs.basis[s1].size());
-        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
         return dims;
     }
-    auto startpoint(int s1, int s2, BasisSet& obs) {
-        auto shell2bf = obs.basis.shell2bf();
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
         jlcxx::Array<int> coords;
-        coords.push_back(shell2bf[s1]);
-        coords.push_back(shell2bf[s2]);
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
         return coords;
     }
 };
@@ -168,11 +169,11 @@ struct KineticEngine
         this->engine = make_engine(libint2::Operator::kinetic,max_nprim,max_l);
     }
     libint2::Engine engine;
-    auto compute(int s1, int s2, BasisSet& obs) {
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2]);
-        auto n1 = obs.basis[s1].size();
-        auto n2 = obs.basis[s2].size();
+        this->engine.compute(obs1.basis[s1],obs1.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
         jlcxx::Array<double> ints;
         for(auto f1=0; f1<n1; ++f1)
@@ -187,17 +188,18 @@ struct KineticEngine
         }
         return d1;
     }
-    auto chunk(int s1, int s2, BasisSet& obs) {
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
-        dims.push_back(obs.basis[s1].size());
-        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
         return dims;
     }
-    auto startpoint(int s1, int s2, BasisSet& obs) {
-        auto shell2bf = obs.basis.shell2bf();
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
         jlcxx::Array<int> coords;
-        coords.push_back(shell2bf[s1]);
-        coords.push_back(shell2bf[s2]);
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
         return coords;
     }
 };
@@ -208,30 +210,30 @@ struct NuclearEngine
         engine.set_params(libint2::make_point_charges(mol.atoms));
         this->engine = engine;
     }
-    auto compute(int s1, int s2, BasisSet& obs) {
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2]);
-        auto n1 = obs.basis[s1].size();
-        auto n2 = obs.basis[s2].size();
+        this->engine.compute(obs1.basis[s1],obs1.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
         jlcxx::Array<double> ints;
         for(auto f1=0; f1<n1; ++f1)
             for(auto f2=0; f2<n2; ++f2)
                 ints.push_back(ints_shellset[f1*n2+f2]);
         return ints;
-
     }
-    auto chunk(int s1, int s2, BasisSet& obs) {
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
-        dims.push_back(obs.basis[s1].size());
-        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
         return dims;
     }
-    auto startpoint(int s1, int s2, BasisSet& obs) {
-        auto shell2bf = obs.basis.shell2bf();
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
         jlcxx::Array<int> coords;
-        coords.push_back(shell2bf[s1]);
-        coords.push_back(shell2bf[s2]);
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
         return coords;
     }
     libint2::Engine engine;
