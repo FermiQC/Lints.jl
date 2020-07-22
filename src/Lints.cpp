@@ -131,7 +131,7 @@ struct OverlapEngine
     libint2::Engine engine;
     auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs1.basis[s1],obs1.basis[s2]);
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
@@ -171,7 +171,7 @@ struct KineticEngine
     libint2::Engine engine;
     auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs1.basis[s1],obs1.basis[s2]);
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
@@ -212,7 +212,7 @@ struct NuclearEngine
     }
     auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs1.basis[s1],obs1.basis[s2]);
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
