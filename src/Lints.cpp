@@ -8,6 +8,8 @@
 void libint2_init()
 {
     libint2::initialize();
+    libint2::Engine eri2(libint2::Operator::coulomb, 2, 2);
+    eri2.set(libint2::BraKet::xs_xx);
 }
 
 void libint2_finalize()
@@ -283,8 +285,93 @@ struct ERIEngine
         coords.push_back(shell2bf[s4]);
         return coords;
     }
-
 };
+struct DFEngine
+{
+    DFEngine(int max_nprim, int max_l) {
+        this->bengine = make_engine(libint2::Operator::coulomb,
+                                    max_nprim,
+                                    max_l);
+        this->jengine = make_engine(libint2::Operator::coulomb,
+                                    max_nprim,
+                                    max_l);
+        this->bengine.set(libint2::BraKet::xs_xx);
+        this->jengine.set(libint2::BraKet::xs_xs);
+    }
+    libint2::Engine bengine;
+    libint2::Engine jengine;
+    auto compute_b(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+        const auto& buf_vec = this->bengine.results();
+        //this->bengine.compute(obs.basis[s1],obs.basis[s2],dfobs.basis[s3]);
+        this->bengine.compute(dfobs.basis[s3],obs.basis[s2],obs.basis[s1]);
+        auto n1 = obs.basis[s1].size();
+        auto n2 = obs.basis[s2].size();
+        auto n3 = dfobs.basis[s3].size();
+        auto ints_shellset = buf_vec[0];
+        jlcxx::Array<double> ints;
+        if (ints_shellset == nullptr) {
+            double z = 0.0;
+            for(auto f= 0; f<(n1*n2*n3); ++f)
+                ints.push_back(z);
+        }
+        else {
+            for(auto f=0; f<(n1*n2*n3); ++f)
+                ints.push_back(ints_shellset[f]);
+        }
+        return ints;
+    }
+    auto compute_j(int s1, int s2, BasisSet& dfobs) {
+        const auto& buf_vec = this->jengine.results();
+        this->jengine.compute(dfobs.basis[s1],dfobs.basis[s2]);
+        auto n1 = dfobs.basis[s1].size();
+        auto n2 = dfobs.basis[s2].size();
+        auto ints_shellset = buf_vec[0];
+        jlcxx::Array<double> ints;
+        if (ints_shellset == nullptr) {
+            double z = 0.0;
+            for(auto f= 0; f<(n1*n2); ++f)
+                ints.push_back(z);
+        }
+        else {
+            for(auto f=0; f<(n1*n2); ++f)
+                ints.push_back(ints_shellset[f]);
+        }
+        return ints;
+    }
+    auto bchunk(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+        jlcxx::Array<int> dims;
+        dims.push_back(dfobs.basis[s3].size());
+        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs.basis[s1].size());
+        return dims;
+    }
+    auto jchunk(int s1, int s2, BasisSet& dfobs) {
+        jlcxx::Array<int> dims;
+        dims.push_back(dfobs.basis[s1].size());
+        dims.push_back(dfobs.basis[s2].size());
+        return dims;
+    }
+    auto bstartpoint(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+        auto obs_shell2bf = obs.basis.shell2bf();
+        auto dfobs_shell2bf = dfobs.basis.shell2bf();
+        jlcxx::Array<int> coords;
+        coords.push_back(dfobs_shell2bf[s3]);
+        coords.push_back(obs_shell2bf[s2]);
+        coords.push_back(obs_shell2bf[s1]);
+        return coords;
+    }
+    auto jstartpoint(int s1, int s2, BasisSet& dfobs) {
+        auto dfobs_shell2bf = dfobs.basis.shell2bf();
+        jlcxx::Array<int> coords;
+        coords.push_back(dfobs_shell2bf[s1]);
+        coords.push_back(dfobs_shell2bf[s2]);
+        return coords;
+    }
+
+              
+};
+
+
 
 
 JLCXX_MODULE Libint2(jlcxx::Module& mod)
@@ -339,5 +426,16 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
         .method("compute",&ERIEngine::compute)
         .method("startpoint",&ERIEngine::startpoint)
         .method("chunk",&ERIEngine::chunk);
+
+    mod.add_type<DFEngine>("DFEngine")
+        .constructor<int,int>()
+        .method("compute_b",&DFEngine::compute_b)
+        .method("compute_j",&DFEngine::compute_j)
+        .method("bchunk",&DFEngine::bchunk)
+        .method("jchunk",&DFEngine::jchunk)
+        .method("bstartpoint",&DFEngine::bstartpoint)
+        .method("jstartpoint",&DFEngine::jstartpoint);
+   
+
 
 }
