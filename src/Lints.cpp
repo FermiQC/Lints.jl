@@ -117,6 +117,13 @@ struct BasisSet
     auto getsize() {
         return this->basis.size();
     }
+    auto nao() {
+        int d1 = 0;
+        for(int n1=0; n1<this->basis.size(); n1++) {
+            d1 += this->basis[n1].size();
+        }
+        return d1;
+    }
     int max_nprim() {
         return this->basis.max_nprim();
     }
@@ -137,10 +144,13 @@ struct OverlapEngine
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
-        for(auto f1=0; f1<n1; ++f1)
-            for(auto f2=0; f2<n2; ++f2)
-                ints.push_back(ints_shellset[f1*n2+f2]);
+        jlcxx::Array<double> ints(n2*n1);
+        double *data = (double*)jl_array_data(ints.wrapped());
+        memcpy(data,ints_shellset,n2*n1*sizeof(double));
+        //for(auto f1=0; f1<n1; ++f1)
+        //
+        //    for(auto f2=0; f2<n2; ++f2)
+        //        ints.push_back(ints_shellset[f1*n2+f2]);
         return ints;
     }
     auto getsize(BasisSet& obs) {
@@ -256,15 +266,20 @@ struct ERIEngine
         auto n3 = obs.basis[s3].size();
         auto n4 = obs.basis[s4].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
+        jlcxx::Array<double> ints(n1*n2*n3*n4);
+        double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            for(auto f=0; f<(n1*n2*n3*n4); ++f)
-                ints.push_back(z);
+            //for(auto f=0; f<(n1*n2*n3*n4); ++f)
+            //    ints.push_back(z);
+            memset(data,z,n1*n2*n3*n4*sizeof(double));
         }
         else {
-            for(auto f=0; f<(n1*n2*n3*n4); ++f)
-                ints.push_back(ints_shellset[f]);
+            //for(auto f=0; f<(n1*n2*n3*n4); ++f)
+            //    ints.push_back(ints_shellset[f]);
+            //ouble *data = (double*)jl_array_data(ints.wrapped());
+            //memcpy(
+            memcpy(data,ints_shellset,n1*n2*n3*n4*sizeof(double));
         }
         return ints;
     }
@@ -397,6 +412,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
     mod.add_type<BasisSet>("BasisSet")
         .constructor<std::string&, std::string&>()
         .constructor<std::string&, Molecule>()
+        .method("nao",&BasisSet::nao)
         .method("getsize",&BasisSet::getsize)
         .method("print_out",&BasisSet::print_out)
         .method("max_nprim",&BasisSet::max_nprim)

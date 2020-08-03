@@ -21,7 +21,7 @@ V_engine = Lints.NuclearEngine(nprim,l,mol)
 eri = [Lints.ERIEngine(nprim,l) for i=1:Threads.nthreads()]
 
 s = Lints.getsize(bas)
-sz = Lints.getsize(S_engine,bas)
+sz = Lints.nao(bas)
 S = zeros(sz,sz)
 T = zeros(sz,sz)
 V = zeros(sz,sz)
