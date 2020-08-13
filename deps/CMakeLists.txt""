@@ -1,0 +1,33 @@
+project(Lints)
+
+cmake_minimum_required(VERSION 2.8.12)
+#set(CMAKE_INSTALL_RPATH "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_MACOSX_RPATH 1)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_CXX_FLAGS "-I/home/matt/.julia/artifacts/07c0d2d7fd9739e16a8520ca528468a3d9b019e5/include/eigen3 -IBOOSTPATH -I${CMAKE_BINARY_DIR}/include/ -L/home/matt/.julia/artifacts/102529506b62a991eeacee8e81c5eb01a560459e/lib")
+#set(CMAKE_CXX_FLAGS "-I/usr/include/eigen3 -L${CMAKE_BINARY_DIR}/lib/")
+
+
+find_package(JlCxx REQUIRED)
+#find_package(Libint2 REQUIRED)
+#find_package(Eigen3 REQUIRED)
+get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
+get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
+set(CMAKE_SKIP_BUILD_RPATH TRUE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH "\$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${JlCxx_location}")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+message(STATUS "Found JlCxx at ${JlCxx_location}")
+
+add_library(Lints SHARED ../src/Lints.cpp)
+
+link_directories(${CMAKE_BINARY_DIR}/lib/)
+target_link_libraries(Lints JlCxx::cxxwrap_julia)
+target_link_libraries(Lints libint2)
+
+install(TARGETS
+    Lints
+LIBRARY DESTINATION lib
+ARCHIVE DESTINATION lib
+RUNTIME DESTINATION lib)

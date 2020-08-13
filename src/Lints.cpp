@@ -270,15 +270,9 @@ struct ERIEngine
         double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            //for(auto f=0; f<(n1*n2*n3*n4); ++f)
-            //    ints.push_back(z);
             memset(data,z,n1*n2*n3*n4*sizeof(double));
         }
         else {
-            //for(auto f=0; f<(n1*n2*n3*n4); ++f)
-            //    ints.push_back(ints_shellset[f]);
-            //ouble *data = (double*)jl_array_data(ints.wrapped());
-            //memcpy(
             memcpy(data,ints_shellset,n1*n2*n3*n4*sizeof(double));
         }
         return ints;
@@ -317,21 +311,19 @@ struct DFEngine
     libint2::Engine jengine;
     auto compute_b(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
         const auto& buf_vec = this->bengine.results();
-        //this->bengine.compute(obs.basis[s1],obs.basis[s2],dfobs.basis[s3]);
         this->bengine.compute(dfobs.basis[s3],obs.basis[s2],obs.basis[s1]);
         auto n1 = obs.basis[s1].size();
         auto n2 = obs.basis[s2].size();
         auto n3 = dfobs.basis[s3].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
+        jlcxx::Array<double> ints(n1*n2*n3);
+        double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            for(auto f= 0; f<(n1*n2*n3); ++f)
-                ints.push_back(z);
+            memset(data,z,n1*n2*n3*sizeof(double));
         }
         else {
-            for(auto f=0; f<(n1*n2*n3); ++f)
-                ints.push_back(ints_shellset[f]);
+            memcpy(data,ints_shellset,n1*n2*n3*sizeof(double));
         }
         return ints;
     }
@@ -341,15 +333,14 @@ struct DFEngine
         auto n1 = dfobs.basis[s1].size();
         auto n2 = dfobs.basis[s2].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
+        jlcxx::Array<double> ints(n1*n2);
+        double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            for(auto f= 0; f<(n1*n2); ++f)
-                ints.push_back(z);
+            memset(data,z,n1*n2*sizeof(double));
         }
         else {
-            for(auto f=0; f<(n1*n2); ++f)
-                ints.push_back(ints_shellset[f]);
+            memcpy(data,ints_shellset,n1*n2*sizeof(double));
         }
         return ints;
     }
