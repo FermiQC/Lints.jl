@@ -8,6 +8,8 @@
 void libint2_init()
 {
     libint2::initialize();
+    libint2::Engine eri2(libint2::Operator::coulomb, 2, 2);
+    eri2.set(libint2::BraKet::xs_xx);
 }
 
 void libint2_finalize()
@@ -115,6 +117,13 @@ struct BasisSet
     auto getsize() {
         return this->basis.size();
     }
+    auto nao() {
+        int d1 = 0;
+        for(int n1=0; n1<this->basis.size(); n1++) {
+            d1 += this->basis[n1].size();
+        }
+        return d1;
+    }
     int max_nprim() {
         return this->basis.max_nprim();
     }
@@ -129,16 +138,19 @@ struct OverlapEngine
         this->engine = make_engine(libint2::Operator::overlap,max_nprim,max_l);
     }
     libint2::Engine engine;
-    auto compute(int s1, int s2, BasisSet& obs) {
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2]);
-        auto n1 = obs.basis[s1].size();
-        auto n2 = obs.basis[s2].size();
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
-        for(auto f1=0; f1<n1; ++f1)
-            for(auto f2=0; f2<n2; ++f2)
-                ints.push_back(ints_shellset[f1*n2+f2]);
+        jlcxx::Array<double> ints(n2*n1);
+        double *data = (double*)jl_array_data(ints.wrapped());
+        memcpy(data,ints_shellset,n2*n1*sizeof(double));
+        //for(auto f1=0; f1<n1; ++f1)
+        //
+        //    for(auto f2=0; f2<n2; ++f2)
+        //        ints.push_back(ints_shellset[f1*n2+f2]);
         return ints;
     }
     auto getsize(BasisSet& obs) {
@@ -148,17 +160,18 @@ struct OverlapEngine
         }
         return d1;
     }
-    auto chunk(int s1, int s2, BasisSet& obs) {
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
-        dims.push_back(obs.basis[s1].size());
-        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
         return dims;
     }
-    auto startpoint(int s1, int s2, BasisSet& obs) {
-        auto shell2bf = obs.basis.shell2bf();
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
         jlcxx::Array<int> coords;
-        coords.push_back(shell2bf[s1]);
-        coords.push_back(shell2bf[s2]);
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
         return coords;
     }
 };
@@ -168,11 +181,11 @@ struct KineticEngine
         this->engine = make_engine(libint2::Operator::kinetic,max_nprim,max_l);
     }
     libint2::Engine engine;
-    auto compute(int s1, int s2, BasisSet& obs) {
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2]);
-        auto n1 = obs.basis[s1].size();
-        auto n2 = obs.basis[s2].size();
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
         jlcxx::Array<double> ints;
         for(auto f1=0; f1<n1; ++f1)
@@ -187,17 +200,18 @@ struct KineticEngine
         }
         return d1;
     }
-    auto chunk(int s1, int s2, BasisSet& obs) {
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
-        dims.push_back(obs.basis[s1].size());
-        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
         return dims;
     }
-    auto startpoint(int s1, int s2, BasisSet& obs) {
-        auto shell2bf = obs.basis.shell2bf();
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
         jlcxx::Array<int> coords;
-        coords.push_back(shell2bf[s1]);
-        coords.push_back(shell2bf[s2]);
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
         return coords;
     }
 };
@@ -208,30 +222,30 @@ struct NuclearEngine
         engine.set_params(libint2::make_point_charges(mol.atoms));
         this->engine = engine;
     }
-    auto compute(int s1, int s2, BasisSet& obs) {
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2]);
-        auto n1 = obs.basis[s1].size();
-        auto n2 = obs.basis[s2].size();
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
         jlcxx::Array<double> ints;
         for(auto f1=0; f1<n1; ++f1)
             for(auto f2=0; f2<n2; ++f2)
                 ints.push_back(ints_shellset[f1*n2+f2]);
         return ints;
-
     }
-    auto chunk(int s1, int s2, BasisSet& obs) {
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
-        dims.push_back(obs.basis[s1].size());
-        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
         return dims;
     }
-    auto startpoint(int s1, int s2, BasisSet& obs) {
-        auto shell2bf = obs.basis.shell2bf();
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
         jlcxx::Array<int> coords;
-        coords.push_back(shell2bf[s1]);
-        coords.push_back(shell2bf[s2]);
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
         return coords;
     }
     libint2::Engine engine;
@@ -252,15 +266,14 @@ struct ERIEngine
         auto n3 = obs.basis[s3].size();
         auto n4 = obs.basis[s4].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
+        jlcxx::Array<double> ints(n1*n2*n3*n4);
+        double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            for(auto f=0; f<(n1*n2*n3*n4); ++f)
-                ints.push_back(z);
+            memset(data,z,n1*n2*n3*n4*sizeof(double));
         }
         else {
-            for(auto f=0; f<(n1*n2*n3*n4); ++f)
-                ints.push_back(ints_shellset[f]);
+            memcpy(data,ints_shellset,n1*n2*n3*n4*sizeof(double));
         }
         return ints;
     }
@@ -281,8 +294,90 @@ struct ERIEngine
         coords.push_back(shell2bf[s4]);
         return coords;
     }
-
 };
+struct DFEngine
+{
+    DFEngine(int max_nprim, int max_l) {
+        this->bengine = make_engine(libint2::Operator::coulomb,
+                                    max_nprim,
+                                    max_l);
+        this->jengine = make_engine(libint2::Operator::coulomb,
+                                    max_nprim,
+                                    max_l);
+        this->bengine.set(libint2::BraKet::xs_xx);
+        this->jengine.set(libint2::BraKet::xs_xs);
+    }
+    libint2::Engine bengine;
+    libint2::Engine jengine;
+    auto compute_b(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+        const auto& buf_vec = this->bengine.results();
+        this->bengine.compute(dfobs.basis[s3],obs.basis[s2],obs.basis[s1]);
+        auto n1 = obs.basis[s1].size();
+        auto n2 = obs.basis[s2].size();
+        auto n3 = dfobs.basis[s3].size();
+        auto ints_shellset = buf_vec[0];
+        jlcxx::Array<double> ints(n1*n2*n3);
+        double *data = (double*)jl_array_data(ints.wrapped());
+        if (ints_shellset == nullptr) {
+            double z = 0.0;
+            memset(data,z,n1*n2*n3*sizeof(double));
+        }
+        else {
+            memcpy(data,ints_shellset,n1*n2*n3*sizeof(double));
+        }
+        return ints;
+    }
+    auto compute_j(int s1, int s2, BasisSet& dfobs) {
+        const auto& buf_vec = this->jengine.results();
+        this->jengine.compute(dfobs.basis[s1],dfobs.basis[s2]);
+        auto n1 = dfobs.basis[s1].size();
+        auto n2 = dfobs.basis[s2].size();
+        auto ints_shellset = buf_vec[0];
+        jlcxx::Array<double> ints(n1*n2);
+        double *data = (double*)jl_array_data(ints.wrapped());
+        if (ints_shellset == nullptr) {
+            double z = 0.0;
+            memset(data,z,n1*n2*sizeof(double));
+        }
+        else {
+            memcpy(data,ints_shellset,n1*n2*sizeof(double));
+        }
+        return ints;
+    }
+    auto bchunk(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+        jlcxx::Array<int> dims;
+        dims.push_back(dfobs.basis[s3].size());
+        dims.push_back(obs.basis[s2].size());
+        dims.push_back(obs.basis[s1].size());
+        return dims;
+    }
+    auto jchunk(int s1, int s2, BasisSet& dfobs) {
+        jlcxx::Array<int> dims;
+        dims.push_back(dfobs.basis[s1].size());
+        dims.push_back(dfobs.basis[s2].size());
+        return dims;
+    }
+    auto bstartpoint(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+        auto obs_shell2bf = obs.basis.shell2bf();
+        auto dfobs_shell2bf = dfobs.basis.shell2bf();
+        jlcxx::Array<int> coords;
+        coords.push_back(dfobs_shell2bf[s3]);
+        coords.push_back(obs_shell2bf[s2]);
+        coords.push_back(obs_shell2bf[s1]);
+        return coords;
+    }
+    auto jstartpoint(int s1, int s2, BasisSet& dfobs) {
+        auto dfobs_shell2bf = dfobs.basis.shell2bf();
+        jlcxx::Array<int> coords;
+        coords.push_back(dfobs_shell2bf[s1]);
+        coords.push_back(dfobs_shell2bf[s2]);
+        return coords;
+    }
+
+              
+};
+
+
 
 
 JLCXX_MODULE Libint2(jlcxx::Module& mod)
@@ -308,6 +403,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
     mod.add_type<BasisSet>("BasisSet")
         .constructor<std::string&, std::string&>()
         .constructor<std::string&, Molecule>()
+        .method("nao",&BasisSet::nao)
         .method("getsize",&BasisSet::getsize)
         .method("print_out",&BasisSet::print_out)
         .method("max_nprim",&BasisSet::max_nprim)
@@ -337,5 +433,16 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
         .method("compute",&ERIEngine::compute)
         .method("startpoint",&ERIEngine::startpoint)
         .method("chunk",&ERIEngine::chunk);
+
+    mod.add_type<DFEngine>("DFEngine")
+        .constructor<int,int>()
+        .method("compute_b",&DFEngine::compute_b)
+        .method("compute_j",&DFEngine::compute_j)
+        .method("bchunk",&DFEngine::bchunk)
+        .method("jchunk",&DFEngine::jchunk)
+        .method("bstartpoint",&DFEngine::bstartpoint)
+        .method("jstartpoint",&DFEngine::jstartpoint);
+   
+
 
 }
