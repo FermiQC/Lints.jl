@@ -1,4 +1,5 @@
 #include "jlcxx/jlcxx.hpp"
+#include "jlcxx/tuple.hpp"
 #include "libint2.hpp"
 #include <fstream>
 #include <string>
@@ -147,10 +148,6 @@ struct OverlapEngine
         jlcxx::Array<double> ints(n2*n1);
         double *data = (double*)jl_array_data(ints.wrapped());
         memcpy(data,ints_shellset,n2*n1*sizeof(double));
-        //for(auto f1=0; f1<n1; ++f1)
-        //
-        //    for(auto f2=0; f2<n2; ++f2)
-        //        ints.push_back(ints_shellset[f1*n2+f2]);
         return ints;
     }
     auto getsize(BasisSet& obs) {
@@ -159,6 +156,77 @@ struct OverlapEngine
             d1 += obs.basis[n1].size();
         }
         return d1;
+    }
+    auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        jlcxx::Array<int> dims;
+        dims.push_back(obs1.basis[s1].size());
+        dims.push_back(obs2.basis[s2].size());
+        return dims;
+    }
+    auto startpoint(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        auto shell2bf1 = obs1.basis.shell2bf();
+        auto shell2bf2 = obs2.basis.shell2bf();
+        jlcxx::Array<int> coords;
+        coords.push_back(shell2bf1[s1]);
+        coords.push_back(shell2bf2[s2]);
+        return coords;
+    }
+};
+
+struct DipoleEngine
+{
+    DipoleEngine(int max_nprim, int max_l, double x=0.0, double y=0.0, double z=0.0) {
+        this->engine = make_engine(libint2::Operator::emultipole1,max_nprim,max_l);
+        std::array<double, 3> ctr = {x, y, z};
+        this->engine.set_params(ctr);
+    }
+    libint2::Engine engine;
+    jlcxx::Array<double> _mux;
+    jlcxx::Array<double> _muy;
+    jlcxx::Array<double> _muz;
+    auto mux() {
+        return this->_mux;
+    }
+    auto muy() {
+        return this->_muy;
+    }
+    auto muz() {
+        return this->_muz;
+    }
+
+    auto compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+        const auto& buf_vec = this->engine.results();
+        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
+        auto n1 = obs1.basis[s1].size();
+        auto n2 = obs2.basis[s2].size();
+        auto s_shellset = buf_vec[0];
+        auto mux_shellset = buf_vec[1];
+        auto muy_shellset = buf_vec[2];
+        auto muz_shellset = buf_vec[3];
+        jlcxx::Array<double> mux(n2*n1);
+        jlcxx::Array<double> muy(n2*n1);
+        jlcxx::Array<double> muz(n2*n1);
+        double *datx = (double*)jl_array_data(mux.wrapped());
+        double *daty = (double*)jl_array_data(muy.wrapped());
+        double *datz = (double*)jl_array_data(muz.wrapped());
+        if (s_shellset == nullptr) {
+            double z = 0.0;
+            memset(datx,z,n1*n2*sizeof(double));
+            memset(daty,z,n1*n2*sizeof(double));
+            memset(datz,z,n1*n2*sizeof(double));
+        }
+        else {
+            memcpy(datx,mux_shellset,n1*n2*sizeof(double));
+            memcpy(daty,muy_shellset,n1*n2*sizeof(double));
+            memcpy(datz,muz_shellset,n1*n2*sizeof(double));
+        }
+        this->_mux = mux;
+        this->_muy = muy;
+        this->_muz = muz;
+    }
+    auto recenter(double x=0.0, double y=0.0, double z=0.0) {
+        std::array<double, 3> ctr = {x, y, z};
+        this->engine.set_params(ctr);
     }
     auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
@@ -270,15 +338,9 @@ struct ERIEngine
         double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            //for(auto f=0; f<(n1*n2*n3*n4); ++f)
-            //    ints.push_back(z);
             memset(data,z,n1*n2*n3*n4*sizeof(double));
         }
         else {
-            //for(auto f=0; f<(n1*n2*n3*n4); ++f)
-            //    ints.push_back(ints_shellset[f]);
-            //ouble *data = (double*)jl_array_data(ints.wrapped());
-            //memcpy(
             memcpy(data,ints_shellset,n1*n2*n3*n4*sizeof(double));
         }
         return ints;
@@ -317,7 +379,6 @@ struct DFEngine
     libint2::Engine jengine;
     auto compute_b(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
         const auto& buf_vec = this->bengine.results();
-        //this->bengine.compute(obs.basis[s1],obs.basis[s2],dfobs.basis[s3]);
         this->bengine.compute(dfobs.basis[s3],obs.basis[s2],obs.basis[s1]);
         auto n1 = obs.basis[s1].size();
         auto n2 = obs.basis[s2].size();
@@ -424,6 +485,13 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
         .method("getsize",&OverlapEngine::getsize)
         .method("chunk",&OverlapEngine::chunk)
         .method("startpoint",&OverlapEngine::startpoint);
+
+    mod.add_type<DipoleEngine>("DipoleEngine")
+        .constructor<int, int, double, double, double>()
+        .method("compute",&DipoleEngine::compute)
+//        .method("getsize",&DipoleEngine::getsize)
+        .method("chunk",&DipoleEngine::chunk)
+        .method("startpoint",&DipoleEngine::startpoint);
 
     mod.add_type<NuclearEngine>("NuclearEngine")
         .constructor<int,int,Molecule>()
