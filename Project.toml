@@ -1,7 +1,7 @@
 name = "Lints"
 uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
 authors = ["MattDavis <matthew.davis010@gmail.com>"]
-version = "0.1.2"
+version = "0.1.3"
 
 [deps]
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
@@ -18,4 +18,5 @@ libint_jll = "5fdff7f3-485e-5122-bc58-379aa217adcc"
 [compat]
 CxxWrap = "0.11"
 NPZ = "0.4"
+TensorOperations = "3.0"
 julia = "1"
