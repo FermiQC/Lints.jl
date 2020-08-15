@@ -67,8 +67,8 @@ l = max(Lints.max_l(bas_df),Lints.max_l(bas))
 df_eri = [Lints.DFEngine(nprim,l) for i=1:Threads.nthreads()]
 
 
-dfsz = Lints.getsize(S_engine,bas_df)
-sz = Lints.getsize(S_engine,bas)
+dfsz = Lints.nao(bas_df)
+sz = Lints.nao(bas)
 pqP = zeros(dfsz,sz,sz)
 J = zeros(dfsz,dfsz)
 I = zeros(sz,sz,sz,sz)

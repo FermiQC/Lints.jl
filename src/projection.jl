@@ -5,8 +5,8 @@ function projector(source,dest)
 
     s1 = getsize(source)
     s2 = getsize(dest)
-    sz1 = getsize(engine,source)
-    sz2 = getsize(engine,dest)
+    sz1 = nao(source)
+    sz2 = nao(dest)
     P = zeros(sz1,sz2)
 
     for _i=1:s1, _j=1:s2
@@ -17,7 +17,8 @@ function projector(source,dest)
         _chonk = chonk .+ 1
         r1 = sp[1]:chonk[1]+sp[1]
         r2 = sp[2]:chonk[2]+sp[2]
-        P[r1,r2] .= transpose(reshape(Lints.compute(engine,i,j,source,dest),Tuple(reverse(_chonk))))
+        Lints.compute(engine,i,j,source,dest)
+        P[r1,r2] .= transpose(reshape(Lints.data(engine),Tuple(reverse(_chonk))))
     end
     engine = nothing
     P

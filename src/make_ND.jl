@@ -8,7 +8,8 @@ function make_2D(destination,engine,basis)
         _chonk = chonk .+ 1
         r1 = sp[1]:chonk[1]+sp[1]
         r2 = sp[2]:chonk[2]+sp[2]
-        destination[r2,r1] .= reshape(Lints.compute(engine,i,j,basis,basis),Tuple(reverse(_chonk)))
+        Lints.compute(engine,i,j,basis,basis)
+        destination[r2,r1] .= reshape(Lints.data(engine),Tuple(reverse(_chonk)))
         destination[r1,r2] .= transpose(destination[r2,r1])
     end
 end
@@ -30,13 +31,13 @@ function make_μ(engine,basis)
 
         Lints.compute(engine,i,j,basis,basis)
 
-        μx[r2,r1] .= reshape(Lints.mux(engine),Tuple(reverse(_chonk)))
+        μx[r2,r1] .= reshape(Lints.get_mux(engine),Tuple(reverse(_chonk)))
         μx[r1,r2] .= transpose(μx[r2,r1])
 
-        μy[r2,r1] .= reshape(Lints.muy(engine),Tuple(reverse(_chonk)))
+        μy[r2,r1] .= reshape(Lints.get_muy(engine),Tuple(reverse(_chonk)))
         μy[r1,r2] .= transpose(μy[r2,r1])
 
-        μz[r2,r1] .= reshape(Lints.muz(engine),Tuple(reverse(_chonk)))
+        μz[r2,r1] .= reshape(Lints.get_muz(engine),Tuple(reverse(_chonk)))
         μz[r1,r2] .= transpose(μz[r2,r1])
     end
     μx,μy,μz
@@ -58,7 +59,8 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
                 r1 = sp[1]:chonk[1]+sp[1]
                 r2 = sp[2]:chonk[2]+sp[2]
                 r3 = sp[3]:chonk[3]+sp[3]
-                shell = convert(Array{precision},permutedims(reshape(Lints.compute_b(engines[id],P,μ,ν,basis,dfbasis),Tuple(reverse(_chonk))),(3,2,1)))
+                Lints.compute_b(engines[id],P,μ,ν,basis,dfbasis)
+                shell = convert(Array{precision},permutedims(reshape(Lints.bdata(engines[id]),Tuple(reverse(_chonk))),(3,2,1)))
                 b[r1,r2,r3] .= shell
             end
         end
@@ -74,7 +76,8 @@ function make_j(destination,engine,basis)
         _chonk = chonk .+ 1
         r1 = sp[1]:chonk[1]+sp[1]
         r2 = sp[2]:chonk[2]+sp[2]
-        destination[r2,r1] .= reshape(Lints.compute_j(engine,i,j,basis),Tuple(reverse(_chonk)))
+        Lints.compute_j(engine,i,j,basis)
+        destination[r2,r1] .= reshape(Lints.jdata(engine),Tuple(reverse(_chonk)))
     end
 end
 function make_ERI(I,engines,basis; precision=Float64)
@@ -98,7 +101,8 @@ function make_ERI(I,engines,basis; precision=Float64)
                     r2 = sp[2]:chonk[2]+sp[2]
                     r3 = sp[3]:chonk[3]+sp[3]
                     r4 = sp[4]:chonk[4]+sp[4]
-                    shell = convert(Array{precision},permutedims(reshape(Lints.compute(engines[id],μ,ν,λ,σ,basis),Tuple(reverse(_chonk))),(4,3,2,1)))
+                    Lints.compute(engines[id],μ,ν,λ,σ,basis)
+                    shell = convert(Array{precision},permutedims(reshape(Lints.data(engines[id]),Tuple(reverse(_chonk))),(4,3,2,1)))
                     I[r1,r2,r3,r4] .= shell
                     I[r2,r1,r3,r4] .= permutedims(shell,[2,1,3,4])
                     I[r1,r2,r4,r3] .= permutedims(shell,[1,2,4,3])
