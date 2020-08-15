@@ -1,7 +1,8 @@
 *cmake
+*swap
 *Makefile
 *CMakeCache.txt
 deps/CMakeFiles
+deps/CMakeList*
 *log
-deps/CMakeLists.txt
 deps/lib
