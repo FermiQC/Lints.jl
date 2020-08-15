@@ -25,12 +25,12 @@ std::vector<libint2::Atom> get_atoms(std::string& inp)
     return atoms;
 }
 
-libint2::BasisSet make_basis(std::string bname, std::string fname)
-{
-    auto atoms = get_atoms(fname);
-    libint2::BasisSet obs(bname,atoms);
-    return obs;
-}
+//libint2::BasisSet make_basis(std::string bname, std::string fname)
+//{
+//    auto atoms = get_atoms(fname);
+//    libint2::BasisSet obs(bname,atoms);
+//    return obs;
+//}
 
 libint2::Engine make_engine(libint2::Operator op, int max_nprim, int max_l)
 {
@@ -69,6 +69,20 @@ struct Atom
 
 struct Molecule
 {
+    Molecule(jlcxx::ArrayRef<long> zs, jlcxx::ArrayRef<double> coords) {
+        std::vector<libint2::Atom> _atoms;
+        this->len = zs.size();
+        double x, y, z;
+        for (int i=0, j=0; i < this->len; i++, j += 3) {
+            libint2::Atom a;
+            a.atomic_number = zs[i];
+            a.x = coords[j];
+            a.y = coords[j+1];
+            a.z = coords[j+2];
+            _atoms.push_back(a);
+        }
+        this->atoms = _atoms;
+    } 
     Molecule(std::string& inp) {
         this->atoms = get_atoms(inp);
         this->len = this->atoms.size();
@@ -99,15 +113,15 @@ struct Molecule
 
 struct BasisSet
 {
-    BasisSet(std::string bname, std::string fname) { 
-        this->basis = make_basis(bname, fname);
-    }
+    //BasisSet(std::string bname, std::string fname) { 
+    //    this->basis = make_basis(bname, fname);
+    //}
     BasisSet(std::string bname, std::vector<libint2::Atom> atoms) {
-        libint2::BasisSet bas(bname, atoms);
+        libint2::BasisSet bas(bname, atoms, true);
         this->basis = bas;
     }
     BasisSet(std::string bname, Molecule mol) {
-        libint2::BasisSet bas(bname,mol.atoms);
+        libint2::BasisSet bas(bname,mol.atoms, true);
         this->basis = bas;
     }
     libint2::BasisSet basis;
@@ -130,6 +144,9 @@ struct BasisSet
     }
     int max_l() {
         return this->basis.max_l();
+    }
+    void set_pure(bool tf) {
+        this->basis.set_pure(tf);
     }
 };
 
@@ -398,6 +415,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
 
     mod.add_type<Molecule>("Molecule")
         .constructor<std::string&>()
+        .constructor<jlcxx::ArrayRef<long>,jlcxx::ArrayRef<double>>()
         .method("get_Atom",&Molecule::get_Atom)
         .method("get_Atoms",&Molecule::get_Atoms)
         .method("get_size",&Molecule::get_size)
@@ -410,6 +428,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
         .method("getsize",&BasisSet::getsize)
         .method("print_out",&BasisSet::print_out)
         .method("max_nprim",&BasisSet::max_nprim)
+        .method("set_pure",&BasisSet::set_pure)
         .method("max_l",&BasisSet::max_l);
         
     mod.add_type<OverlapEngine>("OverlapEngine")

@@ -1,7 +1,6 @@
 using Lints
 using TensorOperations
 using Test
-using NPZ
 using Serialization
 
 path = joinpath(dirname(pathof(Lints)),"..","test")
@@ -33,27 +32,27 @@ Lints.make_2D(T,T_engine,bas)
 Lints.make_2D(V,V_engine,bas)
 Lints.make_ERI(I,eri,bas)
 
+#serialize("S.dat",S)
+#serialize("T.dat",T)
+#serialize("V.dat",V)
+#serialize("I.dat",I)
 _S = deserialize("S.dat")
 _T = deserialize("T.dat")
 _V = deserialize("V.dat")
 _I = deserialize("I.dat")
 
-__S = npzread("S.npy")
-__T = npzread("T.npy")
-__V = npzread("V.npy")
-__I = npzread("I.npy")
 
-@test isapprox(S,__S; atol=1E-12)
-@test isapprox(T,__T; atol=1E-12)
-@test isapprox(V,__V; atol=1E-12)
-@test isapprox(I,__I; atol=1E-12)
+@test isapprox(S,_S; rtol=1E-10)
+@test isapprox(T,_T; rtol=1E-10)
+@test isapprox(V,_V; rtol=1E-10)
+@test isapprox(I,_I; rtol=1E-10)
 
 #test that projector is working
 P = Lints.projector(bas_small,bas)
 
 #test DF integrals
 bas = Lints.BasisSet("CC-PVDZ",mol)
-bas_df = Lints.BasisSet("CC-PVDZ-RI",mol)
+bas_df = Lints.BasisSet("CC-PVDZ-RIFIT",mol)
 
 nprim = Lints.max_nprim(bas)
 l = Lints.max_l(bas)
