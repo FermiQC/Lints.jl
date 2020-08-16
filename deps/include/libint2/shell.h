@@ -175,19 +175,20 @@ namespace libint2 {
           case 'G': return 4;
           case 'H': return 5;
           case 'I': return 6;
-          case 'K': return 7;
-          case 'M': return 8;
-          case 'N': return 9;
-          case 'O': return 10;
-          case 'Q': return 11;
-          case 'R': return 12;
-          case 'T': return 13;
-          case 'U': return 14;
-          case 'V': return 15;
-          case 'W': return 16;
-          case 'X': return 17;
-          case 'Y': return 18;
-          case 'Z': return 19;
+          case 'J': return 7; // this line has been added to make libint play nicely with psi4 style basis sets -- MMD
+          case 'K': return 8;
+          case 'M': return 9;
+          case 'N': return 10;
+          case 'O': return 11;
+          case 'Q': return 12;
+          case 'R': return 13;
+          case 'T': return 14;
+          case 'U': return 15;
+          case 'V': return 16;
+          case 'W': return 17;
+          case 'X': return 18;
+          case 'Y': return 19;
+          case 'Z': return 20;
           default: throw "invalid angular momentum label";
         }
       }
