@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <iterator>
+#include <math.h>
 
 void libint2_init()
 {
@@ -18,19 +19,30 @@ void libint2_finalize()
     libint2::finalize();
 }
 
+int nharms(int n)
+{
+    switch(n) {
+        case 0:
+            return 1;
+            break;
+        case 1:
+            return 3;
+            break;
+        case 2:
+            return 6;
+            break;
+        default:
+            return n*3 + nharms(n-3);
+    }
+}
+
+
 std::vector<libint2::Atom> get_atoms(std::string& inp)
 {
     std::ifstream input_file(inp);
     std::vector<libint2::Atom> atoms = libint2::read_dotxyz(input_file);
     return atoms;
 }
-
-//libint2::BasisSet make_basis(std::string bname, std::string fname)
-//{
-//    auto atoms = get_atoms(fname);
-//    libint2::BasisSet obs(bname,atoms);
-//    return obs;
-//}
 
 libint2::Engine make_engine(libint2::Operator op, int max_nprim, int max_l)
 {
@@ -152,8 +164,12 @@ struct BasisSet
 
 struct OEIEngine
 {
+    ~OEIEngine() {
+        delete[] this->_data;
+    }
     libint2::Engine engine;
-    jlcxx::Array<double> _data;
+    int sz;
+    double* _data;
     auto chunk(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         jlcxx::Array<int> dims;
         dims.push_back(obs1.basis[s1].size());
@@ -169,7 +185,7 @@ struct OEIEngine
         return coords;
     }
     auto data() {
-        return this->_data;
+        return jlcxx::make_julia_array(this->_data,this->sz);
     }
     virtual void compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
@@ -177,16 +193,16 @@ struct OEIEngine
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints(n2*n1);
-        double *data = (double*)jl_array_data(ints.wrapped());
-        memcpy(data,ints_shellset,n2*n1*sizeof(double));
-        this->_data = ints;
+        memcpy(this->_data,ints_shellset,n2*n1*sizeof(double));
+        this->sz = n1*n2;
     }
 };
 struct OverlapEngine : OEIEngine
 {
     OverlapEngine(int max_nprim, int max_l) {
         this->engine = make_engine(libint2::Operator::overlap,max_nprim,max_l);
+        int maxl = nharms(max_l);
+        this->_data = new double[maxl*maxl];
     }
 };
 
@@ -196,10 +212,12 @@ struct DipoleEngine : OEIEngine
         this->engine = make_engine(libint2::Operator::emultipole1,max_nprim,max_l);
         std::array<double, 3> ctr = {x, y, z};
         this->engine.set_params(ctr);
+        int maxl = nharms(max_l);
+        this->_data = new double[maxl*maxl];
     }
-    jlcxx::Array<double> _mux;
-    jlcxx::Array<double> _muy;
-    jlcxx::Array<double> _muz;
+    double* _mux;
+    double* _muy;
+    double* _muz;
 
     void compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         const auto& buf_vec = this->engine.results();
@@ -210,26 +228,18 @@ struct DipoleEngine : OEIEngine
         auto mux_shellset = buf_vec[1];
         auto muy_shellset = buf_vec[2];
         auto muz_shellset = buf_vec[3];
-        jlcxx::Array<double> mux(n2*n1);
-        jlcxx::Array<double> muy(n2*n1);
-        jlcxx::Array<double> muz(n2*n1);
-        double *datx = (double*)jl_array_data(mux.wrapped());
-        double *daty = (double*)jl_array_data(muy.wrapped());
-        double *datz = (double*)jl_array_data(muz.wrapped());
         if (s_shellset == nullptr) {
             double z = 0.0;
-            memset(datx,z,n1*n2*sizeof(double));
-            memset(daty,z,n1*n2*sizeof(double));
-            memset(datz,z,n1*n2*sizeof(double));
+            memset(this->_mux,z,n1*n2*sizeof(double));
+            memset(this->_muy,z,n1*n2*sizeof(double));
+            memset(this->_muz,z,n1*n2*sizeof(double));
         }
         else {
-            memcpy(datx,mux_shellset,n1*n2*sizeof(double));
-            memcpy(daty,muy_shellset,n1*n2*sizeof(double));
-            memcpy(datz,muz_shellset,n1*n2*sizeof(double));
+            memcpy(this->_mux,mux_shellset,n1*n2*sizeof(double));
+            memcpy(this->_muy,muy_shellset,n1*n2*sizeof(double));
+            memcpy(this->_muz,muz_shellset,n1*n2*sizeof(double));
         }
-        this->_mux = mux;
-        this->_muy = muy;
-        this->_muz = muz;
+        this->sz = n1*n2;
     }
     auto recenter(double x=0.0, double y=0.0, double z=0.0) {
         std::array<double, 3> ctr = {x, y, z};
@@ -249,6 +259,8 @@ struct KineticEngine : OEIEngine
 {
     KineticEngine(int max_nprim, int max_l) {
         this->engine = make_engine(libint2::Operator::kinetic,max_nprim,max_l);
+        int maxl = nharms(max_l);
+        this->_data = new double[maxl*maxl];
     }
 };
 struct NuclearEngine : OEIEngine
@@ -257,6 +269,8 @@ struct NuclearEngine : OEIEngine
         libint2::Engine engine(libint2::Operator::nuclear, max_nprim, max_l);
         engine.set_params(libint2::make_point_charges(mol.atoms));
         this->engine = engine;
+        int maxl = nharms(max_l);
+        this->_data = new double[maxl*maxl];
     }
 };
 struct ERIEngine
@@ -265,9 +279,15 @@ struct ERIEngine
         this->engine = make_engine(libint2::Operator::coulomb,
                                     max_nprim,
                                     max_l);
+        int maxl = nharms(max_l);
+        this->_data = new double[maxl*maxl*maxl*maxl];
+    }
+    ~ERIEngine() {
+        delete[] this->_data;
     }
     libint2::Engine engine;
-    jlcxx::Array<double> _data;
+    int sz;
+    double* _data;
     void compute(int s1, int s2, int s3, int s4, BasisSet& obs) {
         const auto& buf_vec = this->engine.results();
         this->engine.compute(obs.basis[s1],obs.basis[s2],obs.basis[s3],obs.basis[s4]);
@@ -276,19 +296,18 @@ struct ERIEngine
         auto n3 = obs.basis[s3].size();
         auto n4 = obs.basis[s4].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints(n1*n2*n3*n4);
-        double *data = (double*)jl_array_data(ints.wrapped());
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            memset(data,z,n1*n2*n3*n4*sizeof(double));
+            memset(this->_data,z,n1*n2*n3*n4*sizeof(double));
         }
         else {
-            memcpy(data,ints_shellset,n1*n2*n3*n4*sizeof(double));
+            memcpy(this->_data,ints_shellset,n1*n2*n3*n4*sizeof(double));
         }
-        this->_data = ints;
+        this->sz = n1*n2*n3*n4;
+
     }
     auto data() {
-        return this->_data;
+        return jlcxx::make_julia_array(this->_data,this->sz);
     }
     auto chunk(int s1, int s2, int s3, int s4, BasisSet& obs) {
         jlcxx::Array<int> dims;
@@ -319,9 +338,14 @@ struct DFEngine
                                     max_l);
         this->bengine.set(libint2::BraKet::xs_xx);
         this->jengine.set(libint2::BraKet::xs_xs);
+        int maxl = nharms(max_l);
+        this->_bdata = new double[maxl*maxl*maxl];
+        this->_jdata = new double[maxl*maxl];
     }
-    jlcxx::Array<double> _bdata;
-    jlcxx::Array<double> _jdata;
+    double* _bdata;
+    double* _jdata;
+    int bsz;
+    int jsz;
     libint2::Engine bengine;
     libint2::Engine jengine;
     auto compute_b(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
@@ -331,18 +355,14 @@ struct DFEngine
         auto n2 = obs.basis[s2].size();
         auto n3 = dfobs.basis[s3].size();
         auto ints_shellset = buf_vec[0];
-        jlcxx::Array<double> ints;
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            for(auto f= 0; f<(n1*n2*n3); ++f)
-                ints.push_back(z);
+            memset(this->_bdata,z,n1*n2*n3*sizeof(double));
         }
         else {
-            for(auto f=0; f<(n1*n2*n3); ++f)
-                ints.push_back(ints_shellset[f]);
+            memcpy(this->_bdata,ints_shellset,n1*n2*n3*sizeof(double));
         }
-        //return ints;
-        this->_bdata = ints;
+        this->bsz = n1*n2*n3;
     }
     auto compute_j(int s1, int s2, BasisSet& dfobs) {
         const auto& buf_vec = this->jengine.results();
@@ -353,15 +373,12 @@ struct DFEngine
         jlcxx::Array<double> ints;
         if (ints_shellset == nullptr) {
             double z = 0.0;
-            for(auto f= 0; f<(n1*n2); ++f)
-                ints.push_back(z);
+            memset(this->_jdata,z,n1*n2*sizeof(double));
         }
         else {
-            for(auto f=0; f<(n1*n2); ++f)
-                ints.push_back(ints_shellset[f]);
+            memcpy(this->_jdata,ints_shellset,n1*n2*sizeof(double));
         }
-        this->_jdata = ints;
-        //return ints;
+        this->jsz = n1*n2;
     }
     auto bchunk(int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
         jlcxx::Array<int> dims;
@@ -393,10 +410,10 @@ struct DFEngine
         return coords;
     }
     auto bdata() {
-        return this->_bdata;
+        return jlcxx::make_julia_array(this->_bdata,this->bsz);
     }
     auto jdata() {
-        return this->_jdata;
+        return jlcxx::make_julia_array(this->_jdata,this->jsz);
     }
 };
 

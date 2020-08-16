@@ -27,10 +27,17 @@ V = zeros(sz,sz)
 I = zeros(sz,sz,sz,sz)
 
 
-Lints.make_2D(S,S_engine,bas)
-Lints.make_2D(T,T_engine,bas)
-Lints.make_2D(V,V_engine,bas)
-Lints.make_ERI(I,eri,bas)
+for i=1:1000
+    println(i)
+    S .= 0
+    T .= 0
+    V .= 0
+    I .= 0
+    Lints.make_2D(S,S_engine,bas)
+    Lints.make_2D(T,T_engine,bas)
+    Lints.make_2D(V,V_engine,bas)
+    Lints.make_ERI(I,eri,bas)
+end
 
 #serialize("S.dat",S)
 #serialize("T.dat",T)
