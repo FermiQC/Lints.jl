@@ -6,8 +6,6 @@ Lints.jl provides an interface to the Libint2 molecular integral generation libr
 ## Current Limitations
 Only the default Libint library is supported, and is distributed as a binary when Lints is installed.
 
-To create a molecule, there must be a file on disk in XYZ format from which we will create a Libint molecule.
-
 ## Example
 Example of using Lints to compute overlap integrals for a molecule with the cc-pVDZ basis set.
 
