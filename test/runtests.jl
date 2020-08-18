@@ -63,7 +63,6 @@ bas_df = Lints.BasisSet("CC-PVDZ-RIFIT",mol)
 
 nprim = Lints.max_nprim(bas)
 l = Lints.max_l(bas)
-
 eri = [Lints.ERIEngine(nprim,l) for i=1:Threads.nthreads()]
 
 
