@@ -83,7 +83,7 @@ struct Atom
 
 struct Molecule
 {
-    Molecule(jlcxx::ArrayRef<long> zs, jlcxx::ArrayRef<double> coords) {
+    Molecule(jlcxx::ArrayRef<int64_t> zs, jlcxx::ArrayRef<double> coords) {
         std::vector<libint2::Atom> _atoms;
         this->len = zs.size();
         double x, y, z;
@@ -189,11 +189,11 @@ struct OEIEngine
         }
         this->_sz = n1*n2;
     }
-    auto chunk(jlcxx::ArrayRef<long> dims, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+    void chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         dims[0] = obs1.basis[s1].size();
         dims[1] = obs2.basis[s2].size();
     }
-    auto startpoint(jlcxx::ArrayRef<long> coords, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+    void startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
         coords[0] = this->obs1_shell2bf[s1];
         coords[1] = this->obs2_shell2bf[s2];
     }
@@ -319,13 +319,13 @@ struct ERIEngine
 
     }
 
-    auto chunk(jlcxx::ArrayRef<long> dims, int s1, int s2, int s3, int s4, BasisSet& obs) {
+    auto chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, int s3, int s4, BasisSet& obs) {
         dims[0] = obs.basis[s1].size();
         dims[1] = obs.basis[s2].size();
         dims[2] = obs.basis[s3].size();
         dims[3] = obs.basis[s4].size();
     }
-    auto startpoint(jlcxx::ArrayRef<long> coords, int s1, int s2, int s3, int s4, BasisSet& obs) {
+    auto startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, int s3, int s4, BasisSet& obs) {
         coords[0] = this->shell2bf[s1];
         coords[1] = this->shell2bf[s2];
         coords[2] = this->shell2bf[s3];
@@ -405,24 +405,24 @@ struct DFEngine
         this->_jsz = n1*n2;
     }
 
-    auto bchunk(jlcxx::ArrayRef<long> dims, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+    auto bchunk(jlcxx::ArrayRef<int64_t> dims, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
         dims[0] = dfobs.basis[s3].size();
         dims[1] = obs.basis[s2].size();
         dims[2] = obs.basis[s1].size();
     }
 
-    auto jchunk(jlcxx::ArrayRef<long> dims, int s1, int s2, BasisSet& dfobs) {
+    auto jchunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, BasisSet& dfobs) {
         dims[0] = dfobs.basis[s1].size();
         dims[1] = dfobs.basis[s2].size();
     }
 
-    auto bstartpoint(jlcxx::ArrayRef<long> coords, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+    auto bstartpoint(jlcxx::ArrayRef<int64_t> coords, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
         coords[0] = this->dfobs_shell2bf[s3];
         coords[1] = this->obs_shell2bf[s2];
         coords[2] = this->obs_shell2bf[s1];
     }
 
-    auto jstartpoint(jlcxx::ArrayRef<long> coords, int s1, int s2, BasisSet& dfobs) {
+    auto jstartpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, BasisSet& dfobs) {
         coords[0] = this->dfobs_shell2bf[s1];
         coords[1] = this->dfobs_shell2bf[s2];
     }
@@ -455,7 +455,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
 
     mod.add_type<Molecule>("Molecule")
         .constructor<std::string&>()
-        .constructor<jlcxx::ArrayRef<long>,jlcxx::ArrayRef<double>>()
+        .constructor<jlcxx::ArrayRef<int64_t>,jlcxx::ArrayRef<double>>()
         .method("get_Atom",&Molecule::get_Atom)
         .method("get_Atoms",&Molecule::get_Atoms)
         .method("get_size",&Molecule::get_size)
