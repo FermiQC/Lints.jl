@@ -82,10 +82,10 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
                 r2 = sp[2]+1:chonk[2]+sp[2]
                 r3 = sp[3]+1:chonk[3]+sp[3]
                 Lints.compute_b(engines[id],buf3,P,μ,ν,basis,dfbasis)
-                ##shell = convert(Array{precision},permutedims(reshape(Lints.bdata(engines[id]),Tuple(reverse(_chonk))),(3,2,1)))
-                @views shell = reshape(buf3[1:Lints.bsz(engines[id])],Tuple(reverse(_chonk)))
-                b[r3,r2,r1] .= shell
-                b[r3,r1,r2] .= permutedims(shell,(1,3,2))
+                #shell = convert(Array{precision},permutedims(reshape(Lints.bdata(engines[id]),Tuple(reverse(_chonk))),(3,2,1)))
+                @views shell = permutedims(reshape(buf3[1:Lints.bsz(engines[id])],Tuple(reverse(_chonk))),(3,2,1))
+                b[r1,r2,r3] .= shell
+                b[r1,r3,r2] .= permutedims(shell,(1,3,2))
             end
         end
         end
