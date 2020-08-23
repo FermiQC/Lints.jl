@@ -27,7 +27,7 @@ V = zeros(sz,sz)
 I = zeros(sz,sz,sz,sz)
 
 
-for i=1:1000
+for i=1:1
     println(i)
     S .= 0
     T .= 0
@@ -54,6 +54,9 @@ _I = deserialize("I.dat")
 @test isapprox(V,_V; rtol=1E-10)
 @test isapprox(I,_I; rtol=1E-10)
 
+bas = Lints.BasisSet("aug-cc-pvdz",mol)
+sz = Lints.nao(bas)
+@test sz == 41
 #test that projector is working
 P = Lints.projector(bas_small,bas)
 
