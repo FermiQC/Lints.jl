@@ -1,7 +1,7 @@
 name = "Lints"
 uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
 authors = ["MattDavis <matthew.davis010@gmail.com>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
