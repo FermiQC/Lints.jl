@@ -334,15 +334,16 @@ namespace libint2 {
       /// decompose basis set name into components
       std::vector<std::string> decompose_name_into_components(std::string name) {
         std::vector<std::string> component_names;
+        // no idea wtf the purpose of this is ... disabling b.c. it creates extraneous basis functions somehow?? See Lints issue #12 - MMD
         // aug-cc-pvxz* = cc-pvxz* + augmentation-... , except aug-cc-pvxz-cabs
-        if ( (name.find("aug-cc-pv") == 0) && (name.find("cabs")==std::string::npos)  ) {
-          std::string base_name = name.substr(4);
-          component_names.push_back(base_name);
-          component_names.push_back(std::string("augmentation-") + base_name);
-        }
-        else
-          component_names.push_back(name);
-
+        //if ( (name.find("aug-cc-pv") == 0) && (name.find("cabs")==std::string::npos)) {
+        //  std::string base_name = name.substr(4);
+        //  component_names.push_back(base_name);
+        //  component_names.push_back(std::string("augmentation-") + base_name);
+        //}
+        //else
+        //  component_names.push_back(name);
+        component_names.push_back(name);
         return component_names;
       }
       
