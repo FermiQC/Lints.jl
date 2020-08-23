@@ -16,7 +16,7 @@ function make_2D(destination,engine,basis)
         r1 = sp[1]+1:chonk[1]+sp[1]
         r2 = sp[2]+1:chonk[2]+sp[2]
         Lints.compute(engine,buf3,i,j,basis,basis)
-        shell = reshape(buf3[1:Lints.sz(engine)],Tuple(reverse(_chonk)))
+        @views shell = reshape(buf3[1:Lints.sz(engine)],Tuple(reverse(_chonk)))
         destination[r2,r1] .= shell
         destination[r1,r2] .= transpose(destination[r2,r1])
     end
@@ -62,7 +62,8 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
     for i=1:Threads.nthreads()
         Lints.init(engines[i],basis,dfbasis)
     end
-    Threads.@threads for _μ=1:s
+    for _μ=1:s
+        Threads.@spawn begin
         id = Threads.threadid()
         buf1 = buf1s[id]
         buf2 = buf2s[id]
@@ -82,10 +83,11 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
                 r3 = sp[3]+1:chonk[3]+sp[3]
                 Lints.compute_b(engines[id],buf3,P,μ,ν,basis,dfbasis)
                 ##shell = convert(Array{precision},permutedims(reshape(Lints.bdata(engines[id]),Tuple(reverse(_chonk))),(3,2,1)))
-                @views shell = permutedims(reshape(buf3[1:Lints.bsz(engines[id])],Tuple(reverse(_chonk))),(3,2,1))
-                b[r1,r2,r3] .= shell
-                b[r1,r3,r2] .= permutedims(shell,(1,3,2))
+                @views shell = reshape(buf3[1:Lints.bsz(engines[id])],Tuple(reverse(_chonk)))
+                b[r3,r2,r1] .= shell
+                b[r3,r1,r2] .= permutedims(shell,(1,3,2))
             end
+        end
         end
     end
 end
@@ -95,18 +97,21 @@ function make_j(destination,engine,basis)
     buf2 = zeros(Int64,2)
     maxl = Lints.maxl(engine)
     buf3 = zeros(Float64,maxl^3)
-    for _i=1:s, _j=1:s
-        i = _i-1
-        j = _j-1
-        Lints.jstartpoint(engine,buf1,i,j,basis)
-        Lints.jchunk(engine,buf2,i,j,basis)
-        sp = buf1 .+ 1
-        chonk = buf2 .- 1
-        _chonk = chonk .+ 1
-        r1 = sp[1]:chonk[1]+sp[1]
-        r2 = sp[2]:chonk[2]+sp[2]
-        Lints.compute_j(engine,buf3,i,j,basis)
-        destination[r2,r1] .= reshape(buf3[1:Lints.jsz(engine)],Tuple(reverse(_chonk)))
+    for _i=1:s
+        for _j=_i:s
+            i = _i-1
+            j = _j-1
+            Lints.jstartpoint(engine,buf1,i,j,basis)
+            Lints.jchunk(engine,buf2,i,j,basis)
+            sp = buf1 .+ 1
+            chonk = buf2 .- 1
+            _chonk = chonk .+ 1
+            r1 = sp[1]:chonk[1]+sp[1]
+            r2 = sp[2]:chonk[2]+sp[2]
+            Lints.compute_j(engine,buf3,i,j,basis)
+            @views destination[r2,r1] .= reshape(buf3[1:Lints.jsz(engine)],Tuple(reverse(_chonk)))
+            destination[r1,r2] .= transpose(destination[r2,r1])
+        end
     end
 end
 function make_ERI(I,engines,basis)
