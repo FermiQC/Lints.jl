@@ -62,8 +62,8 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
     for i=1:Threads.nthreads()
         Lints.init(engines[i],basis,dfbasis)
     end
-    for _μ=1:s
-        Threads.@spawn begin
+    #TODO: this creates a load imbalance that reduces performance
+    Threads.@threads for _μ=1:s
         id = Threads.threadid()
         buf1 = buf1s[id]
         buf2 = buf2s[id]
@@ -87,7 +87,6 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
                 b[r1,r2,r3] .= shell
                 b[r1,r3,r2] .= permutedims(shell,(1,3,2))
             end
-        end
         end
     end
 end
