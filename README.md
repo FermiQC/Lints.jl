@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/FermiQC/Lints.svg?branch=master)](https://travis-ci.com/FermiQC/Lints)
+[![Coverage Status](https://coveralls.io/repos/github/FermiQC/Lints/badge.svg?branch=master)](https://coveralls.io/github/FermiQC/Lints?branch=master)
 # The Julia Interface to Libint2 
 
 Lints.jl provides an interface to the Libint2 molecular integral generation library.
