@@ -6,3 +6,4 @@ deps/CMakeFiles
 deps/CMakeList*
 *log
 deps/lib
+Manifest.toml
