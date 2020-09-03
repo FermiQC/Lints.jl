@@ -4,8 +4,8 @@ function projector(source,dest)
     engine = Lints.OverlapEngine(nprim,l)
     Lints.init(engine,source,dest)
 
-    s1 = getsize(source)
-    s2 = getsize(dest)
+    s1 = nshell(source)
+    s2 = nshell(dest)
     sz1 = nao(source)
     sz2 = nao(dest)
     P = zeros(sz1,sz2)
@@ -25,7 +25,7 @@ function projector(source,dest)
         r1 = sp[1]+1:chonk[1]+sp[1]
         r2 = sp[2]+1:chonk[2]+sp[2]
         Lints.compute(engine,buf3,i,j,source,dest)
-        P[r1,r2] .= transpose(reshape(buf3[1:Lints.sz(engine)],Tuple(reverse(_chonk))))
+        P[r1,r2] .= transpose(reshape(buf3[1:bufsz(engine)],Tuple(reverse(_chonk))))
     end
     engine = nothing
     P

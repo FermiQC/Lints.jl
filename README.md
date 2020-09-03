@@ -5,21 +5,28 @@
 Lints.jl provides an interface to the Libint2 molecular integral generation library.
 
 ## Current Limitations
-Only the default Libint library is supported, and is distributed as a binary when Lints is installed.
+Only the default Libint library is supported, and is distributed as a binary when Lints is installed. Practically speaking, this means
+that nuclear gradients and Hessians are currently unavailable. This is not a technical issue, it just has not yet been required by the
+developers. If you want a Libint library with different features, please open an issue and we will take care of it!
 
 ## Example
 Example of using Lints to compute overlap integrals for a molecule with the cc-pVDZ basis set.
 
 ```
 using Lints
-Lints.libint2_init()
-mol = Lints.Molecule("/tmp/molfile.xyz")
-bas = Lints.BasisSet("cc-pvdz",mol)
-nprim = Lints.max_nprim(bas)
-l = Lints.max_l(bas)
-S_engine = Lints.KineticEngine(nprim,l)
-nao = Lints.nao(bas)
-S = zeros(nao,nao)
-Lints.make_2D(S,S_engine,bas)
-Lints.libint2_finalize()
+mol = Lints.Molecule([8,1,1],[[0.0,0.0,0.0],
+                              [1.0,0.0,0.0],
+                              [0.0,1.0,0.0]])
+bas = Lints.BasisSet("cc-pVDZ",mol)
+S = Lints.make_S(bas)
 ```
+
+## Integrals Available
+| Integral type       | Function signature                                 |
+|---------------------|----------------------------------------------------|
+| Overlap             | `make_S(basis::BasisSet)`                          |
+| Kinetic             | `make_T(basis::BasisSet)`                          |
+| Nuclear Attraction  | `make_V(basis::BasisSet)`                          |
+| 4 center ERI (mn|rs)| `make_ERI4(basis::BasisSet)`                       |
+| 3-center ERI (Q|mn) | `make_ERI3(basis::BasisSet,dfbasis::BasisSet)`     |
+| 2-center ERI (P|Q)  | `make_ERI2(basis::BasisSet)`                       |

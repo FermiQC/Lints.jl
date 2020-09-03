@@ -1,5 +1,32 @@
-function make_2D(destination,engine,basis)
-    s = getsize(basis)
+function make_S(basis::B) where B <: BasisSet
+    make_2D(OverlapEngine,basis)
+end
+
+function make_T(basis::B) where B <: BasisSet
+    make_2D(KineticEngine,basis)
+end
+
+function make_V(basis::B) where B <: BasisSet
+    make_2D(NuclearEngine,basis)
+end
+
+function make_2D(engine_type,basis) where M <: Molecule
+    sz = nao(basis)
+    X = zeros(Float64,sz,sz)
+    nprim = max_nprim(basis)
+    l = max_l(basis)
+    if engine_type == NuclearEngine
+        mol = get_mol(basis)
+        engine = engine_type(nprim,l,mol)
+    else
+        engine = engine_type(nprim,l)
+    end
+    make_2D!(X,engine,basis)
+    X
+end
+    
+function make_2D!(destination,engine,basis)
+    s = nshell(basis)
     maxl = Lints.maxl(engine)
     buf1 = zeros(Int64,2)
     buf2 = zeros(Int64,2)
@@ -16,7 +43,7 @@ function make_2D(destination,engine,basis)
         r1 = sp[1]+1:chonk[1]+sp[1]
         r2 = sp[2]+1:chonk[2]+sp[2]
         Lints.compute(engine,buf3,i,j,basis,basis)
-        @views shell = reshape(buf3[1:Lints.sz(engine)],Tuple(reverse(_chonk)))
+        @views shell = reshape(buf3[1:Lints.bufsz(engine)],Tuple(reverse(_chonk)))
         destination[r2,r1] .= shell
         destination[r1,r2] .= transpose(destination[r2,r1])
     end
@@ -51,78 +78,17 @@ end
 #    μx,μy,μz
 #end
 
-function make_b(b,engines,basis,dfbasis; precision=Float64)
-    s = getsize(basis)
-    dfs = getsize(dfbasis)
-    maxl = Lints.maxl(engines[1])
-    #Threads.@threads for _μ=1:s
-    nt = Threads.nthreads()
-    buf1s = Array{Int64}(undef,3*nt)
-    buf2s = Array{Int64}(undef,3*nt)
-    buf3s = Array{Float64}(undef,nt*maxl^3)
-    for i=1:Threads.nthreads()
-        Lints.init(engines[i],basis,dfbasis)
-    end
-    b1ptr = pointer(buf1s)
-    b2ptr = pointer(buf2s)
-    b3ptr = pointer(buf3s)
-    maxl3 = maxl^3
-    @sync for _μ=1:s
-        Threads.@spawn begin
-        id = Threads.threadid()
-        sp = unsafe_wrap(Array,b1ptr+(id-1)*3*sizeof(Int64),3)
-        chonk = unsafe_wrap(Array,b2ptr+(id-1)*3*sizeof(Int64),3)
-        buf3 = unsafe_wrap(Array,b3ptr+(id-1)*maxl3*sizeof(Float64),maxl3)
-        engine = engines[id]
-        μ = _μ - 1
-        for _ν=_μ:s
-            ν = _ν - 1
-            for _P = 1:dfs
-                P = _P - 1
-                Lints.bstartpoint(engine,sp,P,μ,ν,basis,dfbasis) 
-                Lints.bchunk(engine,chonk,P,μ,ν,basis,dfbasis)
-                Lints.compute_b(engine,buf3,P,μ,ν,basis,dfbasis)
-                sp1,sp2,sp3 = sp
-                c1,c2,c3 = chonk
-                @inbounds @fastmath for m=1:c3
-                    for n=1:c2
-                        for P=1:c1
-                            tmp = buf3[m+(n-1)*c3+(P-1)*c3*c2]
-                            b[P+sp1,n+sp2,m+sp3] = tmp
-                            b[P+sp1,m+sp3,n+sp2] = tmp
-                        end
-                    end
-                end
-            end
-        end
-        end
-    end
+function make_ERI4(basis; nt=Threads.nthreads())
+    nprim = max_nprim(basis)
+    l = max_l(basis)
+    engines = [ERI4Engine(nprim,l) for i=1:nt]
+    sz = nao(basis)
+    I = zeros(Float64,sz,sz,sz,sz)
+    make_4D(I,engines,basis)
+    I
 end
-function make_j(destination,engine,basis)
-    s = getsize(basis)
-    buf1 = zeros(Int64,2)
-    buf2 = zeros(Int64,2)
-    maxl = Lints.maxl(engine)
-    buf3 = zeros(Float64,maxl^3)
-    for _i=1:s
-        for _j=_i:s
-            i = _i-1
-            j = _j-1
-            Lints.jstartpoint(engine,buf1,i,j,basis)
-            Lints.jchunk(engine,buf2,i,j,basis)
-            sp = buf1 .+ 1
-            chonk = buf2 .- 1
-            _chonk = chonk .+ 1
-            r1 = sp[1]:chonk[1]+sp[1]
-            r2 = sp[2]:chonk[2]+sp[2]
-            Lints.compute_j(engine,buf3,i,j,basis)
-            @views destination[r2,r1] .= reshape(buf3[1:Lints.jsz(engine)],Tuple(reverse(_chonk)))
-            destination[r1,r2] .= transpose(destination[r2,r1])
-        end
-    end
-end
-function make_ERI(I,engines,basis)
-    s = getsize(basis)
+function make_4D(X,engines,basis)
+    s = Lints.nshell(basis)
     maxl = Lints.maxl(engines[1])
     buf1s = [zeros(Int64,4) for i=1:Threads.nthreads()]
     buf2s = [zeros(Int64,4) for i=1:Threads.nthreads()]
@@ -156,17 +122,82 @@ function make_ERI(I,engines,basis)
                     r4 = sp[4]+1:chonk[4]+sp[4]
                     Lints.compute(engines[id],buf3,μ,ν,λ,σ,basis)
                     #shell = convert(Array{precision},permutedims(reshape(Lints.data(engines[id]),Tuple(reverse(_chonk))),(4,3,2,1)))
-                    @views shell = permutedims(reshape(buf3[1:Lints.sz(engines[id])],Tuple(reverse(_chonk))),(4,3,2,1))
-                    I[r1,r2,r3,r4] .= shell
-                    I[r2,r1,r3,r4] .= permutedims(shell,[2,1,3,4])
-                    I[r1,r2,r4,r3] .= permutedims(shell,[1,2,4,3])
-                    I[r2,r1,r4,r3] .= permutedims(shell,[2,1,4,3])
-                    I[r3,r4,r1,r2] .= permutedims(shell,[3,4,1,2])
-                    I[r4,r3,r1,r2] .= permutedims(shell,[4,3,1,2])
-                    I[r3,r4,r2,r1] .= permutedims(shell,[3,4,2,1])
-                    I[r4,r3,r2,r1] .= permutedims(shell,[4,3,2,1])
+                    @views shell = permutedims(reshape(buf3[1:Lints.bufsz(engines[id])],Tuple(reverse(_chonk))),(4,3,2,1))
+                    X[r1,r2,r3,r4] .= shell
+                    X[r2,r1,r3,r4] .= permutedims(shell,[2,1,3,4])
+                    X[r1,r2,r4,r3] .= permutedims(shell,[1,2,4,3])
+                    X[r2,r1,r4,r3] .= permutedims(shell,[2,1,4,3])
+                    X[r3,r4,r1,r2] .= permutedims(shell,[3,4,1,2])
+                    X[r4,r3,r1,r2] .= permutedims(shell,[4,3,1,2])
+                    X[r3,r4,r2,r1] .= permutedims(shell,[3,4,2,1])
+                    X[r4,r3,r2,r1] .= permutedims(shell,[4,3,2,1])
                 end
             end
         end
     end
 end
+
+function make_ERI3(basis,dfbasis; nt=Threads.nthreads())
+    sz = nao(basis)
+    dfsz = nao(dfbasis)
+    Pqp = zeros(Float64,dfsz,sz,sz)
+    nprim = max(max_nprim(basis),max_nprim(dfbasis))
+    l = max(max_l(basis),max_l(dfbasis))
+    engines = [ERI3Engine(nprim,l) for i=1:nt]
+    make_3D(Pqp,engines,basis,dfbasis)
+    Pqp
+end
+
+function make_3D(X,engines,basis,dfbasis)
+    s = nshell(basis)
+    dfs = nshell(dfbasis)
+    maxl = Lints.maxl(engines[1])
+    #Threads.@threads for _μ=1:s
+    nt = Threads.nthreads()
+    buf1s = Array{Int64}(undef,3*nt)
+    buf2s = Array{Int64}(undef,3*nt)
+    buf3s = Array{Float64}(undef,nt*maxl^3)
+    for i=1:Threads.nthreads()
+        Lints.init(engines[i],basis,dfbasis)
+    end
+    b1ptr = pointer(buf1s)
+    b2ptr = pointer(buf2s)
+    b3ptr = pointer(buf3s)
+    maxl3 = maxl^3
+    @sync for _μ=1:s
+        Threads.@spawn begin
+        id = Threads.threadid()
+        sp = unsafe_wrap(Array,b1ptr+(id-1)*3*sizeof(Int64),3)
+        chonk = unsafe_wrap(Array,b2ptr+(id-1)*3*sizeof(Int64),3)
+        buf3 = unsafe_wrap(Array,b3ptr+(id-1)*maxl3*sizeof(Float64),maxl3)
+        engine = engines[id]
+        μ = _μ - 1
+        for _ν=_μ:s
+            ν = _ν - 1
+            for _P = 1:dfs
+                P = _P - 1
+                Lints.startpoint(engine,sp,P,μ,ν,basis,dfbasis) 
+                Lints.chunk(engine,chonk,P,μ,ν,basis,dfbasis)
+                Lints.compute(engine,buf3,P,μ,ν,basis,dfbasis)
+                sp1,sp2,sp3 = sp
+                c1,c2,c3 = chonk
+                @inbounds @fastmath for m=1:c3
+                    for n=1:c2
+                        for P=1:c1
+                            tmp = buf3[m+(n-1)*c3+(P-1)*c3*c2]
+                            X[P+sp1,n+sp2,m+sp3] = tmp
+                            X[P+sp1,m+sp3,n+sp2] = tmp
+                        end
+                    end
+                end
+            end
+        end
+        end
+    end
+end
+
+function make_ERI2(basis; nt=Threads.nthreads())
+    make_2D(ERI2Engine,basis)
+end
+
+
