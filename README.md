@@ -14,12 +14,18 @@ Example of using Lints to compute overlap integrals for a molecule with the cc-p
 
 ```
 using Lints
-mol = Lints.Molecule([8,1,1],[[0.0,0.0,0.0],
-                              [1.0,0.0,0.0],
-                              [0.0,1.0,0.0]])
-bas = Lints.BasisSet("cc-pVDZ",mol)
-S = Lints.make_S(bas)
+@lints begin
+    mol = Lints.Molecule([8,1,1],[[0.0,0.0,0.0],
+                                  [1.0,0.0,0.0],
+                                  [0.0,1.0,0.0]])
+    bas = Lints.BasisSet("cc-pVDZ",mol)
+    S = Lints.make_S(bas)
+end
 ```
+
+Wrapping the code that uses Lints in `@lints begin ... end` takes care of initializing and finalizing Libint2 for you.
+Technically, only some Lints functions are required to be in an `@lints` block, but its easiest to remember to just put
+all Lints-using code inside of one of these blocks.
 
 ## Integrals Available
 | Integral type       | Function signature                                 |
