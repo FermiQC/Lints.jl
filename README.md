@@ -33,6 +33,6 @@ all Lints-using code inside of one of these blocks.
 | Overlap             | `make_S(basis::BasisSet)`                          |
 | Kinetic             | `make_T(basis::BasisSet)`                          |
 | Nuclear Attraction  | `make_V(basis::BasisSet)`                          |
-| 4 center ERI (mn|rs)| `make_ERI4(basis::BasisSet)`                       |
-| 3-center ERI (Q|mn) | `make_ERI3(basis::BasisSet,dfbasis::BasisSet)`     |
-| 2-center ERI (P|Q)  | `make_ERI2(basis::BasisSet)`                       |
+| 4 center ERI (mn\|rs)| `make_ERI4(basis::BasisSet)`                       |
+| 3-center ERI (Q\|mn) | `make_ERI3(basis::BasisSet,dfbasis::BasisSet)`     |
+| 2-center ERI (P\|Q)  | `make_ERI2(basis::BasisSet)`                       |
