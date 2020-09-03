@@ -56,37 +56,45 @@ function make_b(b,engines,basis,dfbasis; precision=Float64)
     dfs = getsize(dfbasis)
     maxl = Lints.maxl(engines[1])
     #Threads.@threads for _μ=1:s
-    buf1s = [zeros(Int64,3) for i=1:Threads.nthreads()]
-    buf2s = [zeros(Int64,3) for i=1:Threads.nthreads()]
-    buf3s = [zeros(Float64,maxl^3) for i=1:Threads.nthreads()]
+    nt = Threads.nthreads()
+    buf1s = Array{Int64}(undef,3*nt)
+    buf2s = Array{Int64}(undef,3*nt)
+    buf3s = Array{Float64}(undef,nt*maxl^3)
     for i=1:Threads.nthreads()
         Lints.init(engines[i],basis,dfbasis)
     end
-    #TODO: this creates a load imbalance that reduces performance
-    Threads.@threads for _μ=1:s
+    b1ptr = pointer(buf1s)
+    b2ptr = pointer(buf2s)
+    b3ptr = pointer(buf3s)
+    maxl3 = maxl^3
+    @sync for _μ=1:s
+        Threads.@spawn begin
         id = Threads.threadid()
-        buf1 = buf1s[id]
-        buf2 = buf2s[id]
-        buf3 = buf3s[id]
+        sp = unsafe_wrap(Array,b1ptr+(id-1)*3*sizeof(Int64),3)
+        chonk = unsafe_wrap(Array,b2ptr+(id-1)*3*sizeof(Int64),3)
+        buf3 = unsafe_wrap(Array,b3ptr+(id-1)*maxl3*sizeof(Float64),maxl3)
+        engine = engines[id]
+        μ = _μ - 1
         for _ν=_μ:s
+            ν = _ν - 1
             for _P = 1:dfs
-                μ = _μ - 1
-                ν = _ν - 1
                 P = _P - 1
-                Lints.bstartpoint(engines[id],buf1,P,μ,ν,basis,dfbasis) 
-                Lints.bchunk(engines[id],buf2,P,μ,ν,basis,dfbasis)
-                sp = buf1# .+ 1
-                chonk = buf2 #.- 1
-                _chonk = chonk #.+ 1
-                r1 = sp[1]+1:chonk[1]+sp[1]
-                r2 = sp[2]+1:chonk[2]+sp[2]
-                r3 = sp[3]+1:chonk[3]+sp[3]
-                Lints.compute_b(engines[id],buf3,P,μ,ν,basis,dfbasis)
-                #shell = convert(Array{precision},permutedims(reshape(Lints.bdata(engines[id]),Tuple(reverse(_chonk))),(3,2,1)))
-                @views shell = permutedims(reshape(buf3[1:Lints.bsz(engines[id])],Tuple(reverse(_chonk))),(3,2,1))
-                b[r1,r2,r3] .= shell
-                b[r1,r3,r2] .= permutedims(shell,(1,3,2))
+                Lints.bstartpoint(engine,sp,P,μ,ν,basis,dfbasis) 
+                Lints.bchunk(engine,chonk,P,μ,ν,basis,dfbasis)
+                Lints.compute_b(engine,buf3,P,μ,ν,basis,dfbasis)
+                sp1,sp2,sp3 = sp
+                c1,c2,c3 = chonk
+                @inbounds @fastmath for m=1:c3
+                    for n=1:c2
+                        for P=1:c1
+                            tmp = buf3[m+(n-1)*c3+(P-1)*c3*c2]
+                            b[P+sp1,n+sp2,m+sp3] = tmp
+                            b[P+sp1,m+sp3,n+sp2] = tmp
+                        end
+                    end
+                end
             end
+        end
         end
     end
 end
