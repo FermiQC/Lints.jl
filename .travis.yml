@@ -1,8 +1,9 @@
 language: julia
+julia: 1.4.2
 
 arch:
     - amd64
-    - arch64
+    - arm64
 dist:
     - bionic
     - xenial
