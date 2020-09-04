@@ -206,6 +206,9 @@ struct OEIEngine
         coords[0] = this->obs1_shell2bf[s1];
         coords[1] = this->obs2_shell2bf[s2];
     }
+    void normalize() {
+        this->engine.set(libint2::CartesianShellNormalization::uniform);
+    }
     auto maxl() {
         return this->_maxl;
     }
@@ -328,6 +331,9 @@ struct ERI4Engine
         this->_bufsz = n1*n2*n3*n4;
 
     }
+    void normalize() {
+        this->engine.set(libint2::CartesianShellNormalization::uniform);
+    }
 
     auto chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, int s3, int s4, BasisSet& obs) {
         dims[0] = obs.basis[s1].size();
@@ -391,6 +397,9 @@ struct ERI3Engine
         this->_bufsz = n1*n2*n3;
     }
 
+    void normalize() {
+        this->engine.set(libint2::CartesianShellNormalization::uniform);
+    }
 
     auto chunk(jlcxx::ArrayRef<int64_t> dims, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
         dims[0] = dfobs.basis[s3].size();
@@ -463,6 +472,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
     mod.add_type<OverlapEngine>("OverlapEngine")
         .constructor<int, int>()
         .method("init",&OverlapEngine::init)
+        .method("normalize",&OverlapEngine::normalize)
         .method("maxl",&OverlapEngine::maxl)
         .method("bufsz",&OverlapEngine::bufsz)
         .method("compute",&OverlapEngine::compute)
@@ -481,6 +491,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
     mod.add_type<NuclearEngine>("NuclearEngine")
         .constructor<int,int,Molecule>()
         .method("init",&NuclearEngine::init)
+        .method("normalize",&NuclearEngine::normalize)
         .method("maxl",&NuclearEngine::maxl)
         .method("bufsz",&NuclearEngine::bufsz)
         .method("compute",&NuclearEngine::compute)
@@ -490,6 +501,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
     mod.add_type<KineticEngine>("KineticEngine")
         .constructor<int,int>()
         .method("init",&KineticEngine::init)
+        .method("normalize",&KineticEngine::normalize)
         .method("maxl",&KineticEngine::maxl)
         .method("bufsz",&KineticEngine::bufsz)
         .method("compute",&KineticEngine::compute)
@@ -499,6 +511,7 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
     mod.add_type<ERI4Engine>("ERI4Engine")
         .constructor<int,int>()
         .method("init",&ERI4Engine::init)
+        .method("normalize",&ERI4Engine::normalize)
         .method("maxl",&ERI4Engine::maxl)
         .method("bufsz",&ERI4Engine::bufsz)
         .method("compute",&ERI4Engine::compute)
@@ -507,19 +520,21 @@ JLCXX_MODULE Libint2(jlcxx::Module& mod)
 
     mod.add_type<ERI3Engine>("ERI3Engine")
         .constructor<int,int>()
+        .method("init",&ERI3Engine::init)
+        .method("normalize",&ERI3Engine::normalize)
         .method("compute",&ERI3Engine::compute)
         .method("bufsz",&ERI3Engine::bufsz)
         .method("chunk",&ERI3Engine::chunk)
-        .method("init",&ERI3Engine::init)
         .method("maxl",&ERI3Engine::maxl)
         .method("startpoint",&ERI3Engine::startpoint);
 
     mod.add_type<ERI2Engine>("ERI2Engine")
         .constructor<int,int>()
+        .method("init",&ERI2Engine::init)
+        .method("normalize",&ERI2Engine::normalize)
         .method("compute",&ERI2Engine::compute)
         .method("bufsz",&ERI2Engine::bufsz)
         .method("chunk",&ERI2Engine::chunk)
-        .method("init",&ERI2Engine::init)
         .method("maxl",&ERI2Engine::maxl)
         .method("startpoint",&ERI2Engine::startpoint);
 }

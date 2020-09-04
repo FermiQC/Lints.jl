@@ -1,16 +1,16 @@
-function make_S(basis::B) where B <: BasisSet
-    make_2D(OverlapEngine,basis)
+function make_S(basis::B;normalize=false) where B <: BasisSet
+    make_2D(OverlapEngine,basis,normalize=normalize)
 end
 
-function make_T(basis::B) where B <: BasisSet
-    make_2D(KineticEngine,basis)
+function make_T(basis::B;normalize=false) where B <: BasisSet
+    make_2D(KineticEngine,basis,normalize=normalize)
 end
 
-function make_V(basis::B) where B <: BasisSet
-    make_2D(NuclearEngine,basis)
+function make_V(basis::B;normalize=false) where B <: BasisSet
+    make_2D(NuclearEngine,basis,normalize=normalize)
 end
 
-function make_2D(engine_type,basis) where M <: Molecule
+function make_2D(engine_type,basis;normalize=false) where M <: Molecule
     sz = nao(basis)
     X = zeros(Float64,sz,sz)
     nprim = max_nprim(basis)
@@ -21,12 +21,15 @@ function make_2D(engine_type,basis) where M <: Molecule
     else
         engine = engine_type(nprim,l)
     end
-    make_2D!(X,engine,basis)
+    make_2D!(X,engine,basis,normalize=normalize)
     X
 end
     
-function make_2D!(destination,engine,basis)
-    s = nshell(basis)
+function make_2D!(destination,engine,basis;normalize=false)
+    s = Lints.nshell(basis)
+    if normalize
+        Lints.normalize(engine)
+    end
     maxl = Lints.maxl(engine)
     buf1 = zeros(Int64,2)
     buf2 = zeros(Int64,2)
@@ -78,16 +81,16 @@ end
 #    μx,μy,μz
 #end
 
-function make_ERI4(basis; nt=Threads.nthreads())
+function make_ERI4(basis; nt=Threads.nthreads(), normalize=false)
     nprim = max_nprim(basis)
     l = max_l(basis)
     engines = [ERI4Engine(nprim,l) for i=1:nt]
     sz = nao(basis)
     I = zeros(Float64,sz,sz,sz,sz)
-    make_4D(I,engines,basis)
+    make_4D(I,engines,basis,normalize=normalize)
     I
 end
-function make_4D(X,engines,basis)
+function make_4D(X,engines,basis;normalize=false)
     s = Lints.nshell(basis)
     maxl = Lints.maxl(engines[1])
     buf1s = [zeros(Int64,4) for i=1:Threads.nthreads()]
@@ -95,6 +98,9 @@ function make_4D(X,engines,basis)
     buf3s = [zeros(Float64,maxl^4) for i=1:Threads.nthreads()]
     for i=1:Threads.nthreads()
         Lints.init(engines[i],basis)
+        if normalize
+            Lints.normalize(engines[i])
+        end
     end
     Threads.@threads for _ν=1:s
         id = Threads.threadid()
@@ -137,18 +143,18 @@ function make_4D(X,engines,basis)
     end
 end
 
-function make_ERI3(basis,dfbasis; nt=Threads.nthreads())
+function make_ERI3(basis,dfbasis; nt=Threads.nthreads(), normalize=false)
     sz = nao(basis)
     dfsz = nao(dfbasis)
     Pqp = zeros(Float64,dfsz,sz,sz)
     nprim = max(max_nprim(basis),max_nprim(dfbasis))
     l = max(max_l(basis),max_l(dfbasis))
     engines = [ERI3Engine(nprim,l) for i=1:nt]
-    make_3D(Pqp,engines,basis,dfbasis)
+    make_3D(Pqp,engines,basis,dfbasis,normalize=normalize)
     Pqp
 end
 
-function make_3D(X,engines,basis,dfbasis)
+function make_3D(X,engines,basis,dfbasis;normalize=false)
     s = nshell(basis)
     dfs = nshell(dfbasis)
     maxl = Lints.maxl(engines[1])
@@ -159,6 +165,9 @@ function make_3D(X,engines,basis,dfbasis)
     buf3s = Array{Float64}(undef,nt*maxl^3)
     for i=1:Threads.nthreads()
         Lints.init(engines[i],basis,dfbasis)
+        if normalize
+            Lints.normalize(engines[i])
+        end
     end
     b1ptr = pointer(buf1s)
     b2ptr = pointer(buf2s)
@@ -196,8 +205,8 @@ function make_3D(X,engines,basis,dfbasis)
     end
 end
 
-function make_ERI2(basis; nt=Threads.nthreads())
-    make_2D(ERI2Engine,basis)
+function make_ERI2(basis; nt=Threads.nthreads(), normalize=false)
+    make_2D(ERI2Engine,basis,normalize=normalize)
 end
 
 
