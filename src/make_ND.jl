@@ -176,9 +176,9 @@ function make_3D(X,engines,basis,dfbasis;normalize=false)
     @sync for _μ=1:s
         Threads.@spawn begin
         id = Threads.threadid()
-        sp = unsafe_wrap(Array,b1ptr+(id-1)*3*sizeof(Int64),3)
-        chonk = unsafe_wrap(Array,b2ptr+(id-1)*3*sizeof(Int64),3)
-        buf3 = unsafe_wrap(Array,b3ptr+(id-1)*maxl3*sizeof(Float64),maxl3)
+        sp = Array{Int64}(undef,3)
+        chonk = Array{Int64}(undef,3)
+        buf3 = Array{Float64}(undef,maxl3)
         engine = engines[id]
         μ = _μ - 1
         for _ν=_μ:s
