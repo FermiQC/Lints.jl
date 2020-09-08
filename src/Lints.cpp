@@ -136,7 +136,7 @@ struct BasisSet
         return _mol;
     }
     void set_pure(bool tf) {
-        this->basis.set_pure(tf);
+        basis.set_pure(tf);
     }
 
     libint2::BasisSet basis;
@@ -152,8 +152,8 @@ struct OEIEngine
     OEIEngine(int max_l, libint2::Engine&& engine) : _engine(std::move(engine)), _bufsz(0), _maxl(ncart(max_l)) {}
 
     void init(const BasisSet& obs1, const BasisSet& obs2) {
-        obs1_shell2bf = obs1.basis.shell2bf();
-        obs2_shell2bf = obs2.basis.shell2bf();
+        _obs1_shell2bf = obs1.basis.shell2bf();
+        _obs2_shell2bf = obs2.basis.shell2bf();
     }
     
     virtual void compute(jlcxx::ArrayRef<double> buf, int s1, int s2, const BasisSet& obs1, const BasisSet& obs2) {
@@ -178,8 +178,8 @@ struct OEIEngine
     }
     
     void startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, const BasisSet& obs1, const BasisSet& obs2) {
-        coords[0] = this->obs1_shell2bf[s1];
-        coords[1] = this->obs2_shell2bf[s2];
+        coords[0] = _obs1_shell2bf[s1];
+        coords[1] = _obs2_shell2bf[s2];
     }
     
     void normalize() {
@@ -187,19 +187,19 @@ struct OEIEngine
     }
     
     auto maxl() {
-        return this->_maxl;
+        return _maxl;
     }
     
     auto bufsz() {
-        return this->_bufsz;
+        return _bufsz;
     }
 
 protected:
     libint2::Engine _engine;
     int _bufsz;
     int _maxl;
-    std::vector<long unsigned int> obs1_shell2bf;
-    std::vector<long unsigned int> obs2_shell2bf;
+    std::vector<long unsigned int> _obs1_shell2bf;
+    std::vector<long unsigned int> _obs2_shell2bf;
 };
 
 struct OverlapEngine : OEIEngine
@@ -229,29 +229,29 @@ struct DipoleEngine : OEIEngine
         auto muy_shellset = buf_vec[2];
         auto muz_shellset = buf_vec[3];
         if (s_shellset == nullptr) {
-            memset(this->_mux,0,n1*n2*sizeof(double));
-            memset(this->_muy,0,n1*n2*sizeof(double));
-            memset(this->_muz,0,n1*n2*sizeof(double));
+            memset(_mux,0,n1*n2*sizeof(double));
+            memset(_muy,0,n1*n2*sizeof(double));
+            memset(_muz,0,n1*n2*sizeof(double));
         }
         else {
-            memcpy(this->_mux,mux_shellset,n1*n2*sizeof(double));
-            memcpy(this->_muy,muy_shellset,n1*n2*sizeof(double));
-            memcpy(this->_muz,muz_shellset,n1*n2*sizeof(double));
+            memcpy(_mux,mux_shellset,n1*n2*sizeof(double));
+            memcpy(_muy,muy_shellset,n1*n2*sizeof(double));
+            memcpy(_muz,muz_shellset,n1*n2*sizeof(double));
         }
-        this->_bufsz = n1*n2;
+        _bufsz = n1*n2;
     }
     auto recenter(double x=0.0, double y=0.0, double z=0.0) {
         std::array<double, 3> ctr = {x, y, z};
         _engine.set_params(ctr);
     }
     auto mux() {
-        return this->_mux;
+        return _mux;
     }
     auto muy() {
-        return this->_muy;
+        return _muy;
     }
     auto muz() {
-        return this->_muz;
+        return _muz;
     }
 };
 
