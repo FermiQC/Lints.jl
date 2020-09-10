@@ -18,28 +18,13 @@ void libint2_finalize()
     libint2::finalize();
 }
 
-//recursive function to determine number of cartesian gaussians for a given AM. 
-//since this is always >= number of sph. harmonics for a given AM, we use this
-//for building buffers.
-int nharms(int n)
+int ncart(int am)
 {
-    switch(n) {
-        case 0: // s 
-            return 1;
-            break;
-        case 1: // p 
-            return 3;
-            break;
-        case 2: // d
-            return 6;
-            break;
-        default: // f+
-            return n*3 + nharms(n-3);
-    }
+    return ((am >= 0) ? ((((am) + 2) * ((am) + 1)) >> 1) : 0);
 }
 
 
-std::vector<libint2::Atom> get_atoms(std::string& inp)
+std::vector<libint2::Atom> get_atoms(const std::string& inp)
 {
     std::ifstream input_file(inp);
     std::vector<libint2::Atom> atoms = libint2::read_dotxyz(input_file);
@@ -48,58 +33,48 @@ std::vector<libint2::Atom> get_atoms(std::string& inp)
 
 libint2::Engine make_engine(libint2::Operator op, int max_nprim, int max_l)
 {
-    libint2::Engine engine(op,max_nprim,max_l);
-    return engine;
+    return libint2::Engine(op, max_nprim, max_l);
 }
 
 struct Atom
 {
     Atom(int Z, double x, double y, double z) {
-        libint2::Atom atom;
-        atom.atomic_number = Z;
-        atom.x = x;
-        atom.y = y;
-        atom.z = z;
-        this->atom = atom;
+        _atom.atomic_number = Z;
+        _atom.x = x;
+        _atom.y = y;
+        _atom.z = z;
     }
-    Atom(libint2::Atom& atom) {
-        this->atom = atom;
-    }
-    libint2::Atom atom;
-    int Z() { return this->atom.atomic_number; }
-    auto get_pos() { 
+    Atom(libint2::Atom& atom) : _atom(atom) {}
+
+    int Z() const { return _atom.atomic_number; }
+
+    auto get_pos() -> jlcxx::Array<double> { 
         jlcxx::Array<double> pos;
-        pos.push_back(this->atom.x);
-        pos.push_back(this->atom.y);
-        pos.push_back(this->atom.z);
+        pos.push_back(_atom.x);
+        pos.push_back(_atom.y);
+        pos.push_back(_atom.z);
         return pos;
     }
-    auto set_pos(double x, double y, double z) {
-        this->atom.x = x;
-        this->atom.y = y;
-        this->atom.z = z;
+
+    void set_pos(double x, double y, double z) {
+        _atom.x = x;
+        _atom.y = y;
+        _atom.z = z;
     }
+
+private:
+    libint2::Atom _atom;
 };
 
 struct Molecule
 {
-    Molecule(jlcxx::ArrayRef<int64_t> zs, jlcxx::ArrayRef<double> coords) {
-        std::vector<libint2::Atom> _atoms;
-        this->len = zs.size();
-        double x, y, z;
-        for (int i=0, j=0; i < this->len; i++, j += 3) {
-            libint2::Atom a;
-            a.atomic_number = zs[i];
-            a.x = coords[j];
-            a.y = coords[j+1];
-            a.z = coords[j+2];
-            _atoms.push_back(a);
+    Molecule(const jlcxx::ArrayRef<int64_t>& zs, const jlcxx::ArrayRef<double>& coords) {
+        for (int i=0, j=0; i < zs.size(); i++, j += 3) {
+            _atoms.push_back({.atomic_number = (int)zs[i], .x = coords[j], .y = coords[j+1], .z = coords[j+2]});
         }
-        this->atoms = _atoms;
     } 
-    Molecule(std::string& inp) {
-        this->atoms = get_atoms(inp);
-        this->len = this->atoms.size();
+    Molecule(const std::string& inp) {
+        _atoms = get_atoms(inp);
     }
     auto push_back(int Z, double x, double y, double z) {
         libint2::Atom atom;//(Z,x,y,z);
@@ -107,141 +82,146 @@ struct Molecule
         atom.x = x;
         atom.y = y;
         atom.z = z;
-        this->atoms.push_back(atom);
-        this->Atoms.push_back(Atom(atom));
-        this->len++;
+        _atoms.push_back(atom);
+        _Atoms.push_back(Atom(atom));
     }
-    auto get_Atom(int i) {
-        return Atom(this->atoms[i]);
+    auto get_Atom(int i) -> Atom {
+        return Atom(_atoms[i]);
     }
-    auto get_Atoms() {
+    auto get_Atoms() -> jlcxx::Array<Atom> {
         jlcxx::Array<Atom> Atoms;
-        for(int i=0; i < this->atoms.size(); i++) {
-            Atoms.push_back(this->get_Atom(i));
+        for(int i=0; i < _atoms.size(); i++) {
+            Atoms.push_back(get_Atom(i));
         }
         return Atoms;
     }
-    auto get_size() {
-        return this->len;
+    auto get_size() -> int {
+        return _atoms.size();
     }
-    int len;
-    jlcxx::Array<Atom> Atoms;
-    std::vector<libint2::Atom> atoms;
+
+    const std::vector<libint2::Atom>& atoms() const {
+        return _atoms;
+    }
+
+private:
+    jlcxx::Array<Atom> _Atoms;
+    std::vector<libint2::Atom> _atoms;
 };
 
 struct BasisSet
 {
-    libint2::BasisSet basis;
-    Molecule mol;
-    //BasisSet(std::string bname, std::vector<libint2::Atom> atoms) {
-    //    libint2::BasisSet bas(bname, atoms, true);
-    //    this->basis = bas;
-    //    this->mol = nullptr;
-    //}
-    BasisSet(std::string bname, Molecule mol) : mol(mol) {
-        libint2::BasisSet bas(bname,mol.atoms, true);
-        this->basis = bas;
-    }
-    auto print_out() {
-        std::copy(begin(this->basis),end(this->basis),
+    BasisSet(const std::string& bname, Molecule mol) : basis(bname, mol.atoms(), true), _mol(std::move(mol)) { }
+
+    void print_out() {
+        std::copy(begin(basis),end(basis),
                   std::ostream_iterator<libint2::Shell>(std::cout, "\n"));
     }
-    auto nshell() {
-        return this->basis.size();
+    auto nshell() const {
+        return basis.size();
     }
     auto nao() {
         int d1 = 0;
-        for(int n1=0; n1<this->basis.size(); n1++) {
-            d1 += this->basis[n1].size();
+        for(int n1=0; n1<nshell(); n1++) {
+            d1 += basis[n1].size();
         }
         return d1;
     }
     long max_nprim() {
-        return this->basis.max_nprim();
+        return basis.max_nprim();
     }
     long max_l() {
-        return this->basis.max_l();
+        return basis.max_l();
     }
     Molecule get_mol() {
-        return this->mol;
+        return _mol;
     }
     void set_pure(bool tf) {
-        this->basis.set_pure(tf);
+        basis.set_pure(tf);
     }
+
+    libint2::BasisSet basis;
+
+private:
+    Molecule _mol;
 };
 
 //one electron integral engine parent struct
 struct OEIEngine
 {
-    libint2::Engine engine;
-    int _bufsz;
-    int _maxl;
-    std::vector<long unsigned int> obs1_shell2bf;
-    std::vector<long unsigned int> obs2_shell2bf;
-    void init(BasisSet& obs1, BasisSet& obs2) {
-        this->obs1_shell2bf = obs1.basis.shell2bf();
-        this->obs2_shell2bf = obs2.basis.shell2bf();
+    OEIEngine() = delete;
+    OEIEngine(int max_l, libint2::Engine&& engine) : _engine(std::move(engine)), _bufsz(0), _maxl(ncart(max_l)) {}
+
+    void init(const BasisSet& obs1, const BasisSet& obs2) {
+        _obs1_shell2bf = obs1.basis.shell2bf();
+        _obs2_shell2bf = obs2.basis.shell2bf();
     }
-    virtual void compute(jlcxx::ArrayRef<double> buf, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
-        const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
+    
+    virtual void compute(jlcxx::ArrayRef<double> buf, int s1, int s2, const BasisSet& obs1, const BasisSet& obs2) {
+        const auto& buf_vec = _engine.results();
+        _engine.compute(obs1.basis[s1],obs2.basis[s2]);
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto ints_shellset = buf_vec[0];
         double *data = (double*)jl_array_data(buf.wrapped());
-        if (ints_shellset == nullptr) {
-            double z = 0.0;
-            memset(data,z,n1*n2*sizeof(double));
-        }
-        else {
+        if (ints_shellset) {
             memcpy(data,ints_shellset,n2*n1*sizeof(double));
         }
-        this->_bufsz = n1*n2;
+        else {
+            memset(data,0,n1*n2*sizeof(double));
+        }
+        _bufsz = n1*n2;
     }
-    void chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
+    
+    void chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, const BasisSet& obs1, const BasisSet& obs2) {
         dims[0] = obs1.basis[s1].size();
         dims[1] = obs2.basis[s2].size();
     }
-    void startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
-        coords[0] = this->obs1_shell2bf[s1];
-        coords[1] = this->obs2_shell2bf[s2];
+    
+    void startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, const BasisSet& obs1, const BasisSet& obs2) {
+        coords[0] = _obs1_shell2bf[s1];
+        coords[1] = _obs2_shell2bf[s2];
     }
+    
     void normalize() {
-        this->engine.set(libint2::CartesianShellNormalization::uniform);
+        _engine.set(libint2::CartesianShellNormalization::uniform);
     }
+    
     auto maxl() {
-        return this->_maxl;
+        return _maxl;
     }
+    
     auto bufsz() {
-        return this->_bufsz;
+        return _bufsz;
     }
+
+protected:
+    libint2::Engine _engine;
+    int _bufsz;
+    int _maxl;
+    std::vector<long unsigned int> _obs1_shell2bf;
+    std::vector<long unsigned int> _obs2_shell2bf;
 };
+
 struct OverlapEngine : OEIEngine
 {
-    OverlapEngine(int max_nprim, int max_l) {
-        this->engine = make_engine(libint2::Operator::overlap,max_nprim,max_l);
-        int maxl = nharms(max_l);
-        this->_maxl = maxl;
-    }
+    OverlapEngine(int max_nprim, int max_l) : OEIEngine(max_l, make_engine(libint2::Operator::overlap,max_nprim,max_l)) {}
 };
 
 struct DipoleEngine : OEIEngine
 {
-    DipoleEngine(int max_nprim, int max_l, double x=0.0, double y=0.0, double z=0.0) {
-        this->engine = make_engine(libint2::Operator::emultipole1,max_nprim,max_l);
+    DipoleEngine(int max_nprim, int max_l, double x=0.0, double y=0.0, double z=0.0) : OEIEngine(max_l, make_engine(libint2::Operator::emultipole1,max_nprim,max_l)) {
         std::array<double, 3> ctr = {x, y, z};
-        this->engine.set_params(ctr);
-        int maxl = nharms(max_l);
-        this->_maxl = maxl;
+        _engine.set_params(ctr);
     }
+
     double* _mux;
     double* _muy;
     double* _muz;
-    int _bufsz;
+    
+    void compute(int s1, int s2, const BasisSet& obs1, const BasisSet& obs2) {
+        const auto& buf_vec = _engine.results();
+        _engine.compute(obs1.basis[s1],obs2.basis[s2]);
 
-    void compute(int s1, int s2, BasisSet& obs1, BasisSet& obs2) {
-        const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs1.basis[s1],obs2.basis[s2]);
         auto n1 = obs1.basis[s1].size();
         auto n2 = obs2.basis[s2].size();
         auto s_shellset = buf_vec[0];
@@ -249,196 +229,175 @@ struct DipoleEngine : OEIEngine
         auto muy_shellset = buf_vec[2];
         auto muz_shellset = buf_vec[3];
         if (s_shellset == nullptr) {
-            double z = 0.0;
-            memset(this->_mux,z,n1*n2*sizeof(double));
-            memset(this->_muy,z,n1*n2*sizeof(double));
-            memset(this->_muz,z,n1*n2*sizeof(double));
+            memset(_mux,0,n1*n2*sizeof(double));
+            memset(_muy,0,n1*n2*sizeof(double));
+            memset(_muz,0,n1*n2*sizeof(double));
         }
         else {
-            memcpy(this->_mux,mux_shellset,n1*n2*sizeof(double));
-            memcpy(this->_muy,muy_shellset,n1*n2*sizeof(double));
-            memcpy(this->_muz,muz_shellset,n1*n2*sizeof(double));
+            memcpy(_mux,mux_shellset,n1*n2*sizeof(double));
+            memcpy(_muy,muy_shellset,n1*n2*sizeof(double));
+            memcpy(_muz,muz_shellset,n1*n2*sizeof(double));
         }
-        this->_bufsz = n1*n2;
+        _bufsz = n1*n2;
     }
     auto recenter(double x=0.0, double y=0.0, double z=0.0) {
         std::array<double, 3> ctr = {x, y, z};
-        this->engine.set_params(ctr);
+        _engine.set_params(ctr);
     }
     auto mux() {
-        return this->_mux;
+        return _mux;
     }
     auto muy() {
-        return this->_muy;
+        return _muy;
     }
     auto muz() {
-        return this->_muz;
+        return _muz;
     }
 };
 
 struct KineticEngine : OEIEngine
 {
-    KineticEngine(int max_nprim, int max_l) {
-        this->engine = make_engine(libint2::Operator::kinetic,max_nprim,max_l);
-        this->_maxl = nharms(max_l);
-    }
+    KineticEngine(int max_nprim, int max_l) : OEIEngine(max_l, make_engine(libint2::Operator::kinetic,max_nprim,max_l)) {}
 };
 
 struct NuclearEngine : OEIEngine
 {
-    NuclearEngine(int max_nprim, int max_l, Molecule mol) {
-        libint2::Engine engine(libint2::Operator::nuclear, max_nprim, max_l);
-        engine.set_params(libint2::make_point_charges(mol.atoms));
-        this->engine = engine;
-        this->_maxl = nharms(max_l);
+    NuclearEngine(int max_nprim, int max_l, Molecule mol) : OEIEngine(max_l, make_engine(libint2::Operator::nuclear, max_nprim, max_l)) {
+        _engine.set_params(libint2::make_point_charges(mol.atoms()));
     }
 };
 
 struct ERI4Engine
 {
-    libint2::Engine engine;
-    int _bufsz;
-    int _maxl;
-    std::vector<long unsigned int> shell2bf;
+    ERI4Engine(int max_nprim, int max_l) : _engine(make_engine(libint2::Operator::coulomb, max_nprim, max_l)), _bufsz(0), _maxl(ncart(max_l)) { }
 
-    ERI4Engine(int max_nprim, int max_l) {
-        this->engine = make_engine(libint2::Operator::coulomb,
-                                    max_nprim,
-                                    max_l);
-        this->_maxl = nharms(max_l);
-    }
-
-    void init(BasisSet& obs) {
-        this->shell2bf = obs.basis.shell2bf();
+    void init(const BasisSet& obs) {
+        shell2bf = obs.basis.shell2bf();
     }
 
     void compute(jlcxx::ArrayRef<double> buf, int s1, int s2, int s3, int s4, BasisSet& obs) {
-        const auto& buf_vec = this->engine.results();
-        this->engine.compute(obs.basis[s1],obs.basis[s2],obs.basis[s3],obs.basis[s4]);
+        const auto& buf_vec = _engine.results();
+        _engine.compute(obs.basis[s1],obs.basis[s2],obs.basis[s3],obs.basis[s4]);
+
         auto n1 = obs.basis[s1].size();
         auto n2 = obs.basis[s2].size();
         auto n3 = obs.basis[s3].size();
         auto n4 = obs.basis[s4].size();
         auto ints_shellset = buf_vec[0];
         double *data = (double*)jl_array_data(buf.wrapped());
-        if (ints_shellset == nullptr) {
-            double z = 0.0;
-            memset(data,z,n1*n2*n3*n4*sizeof(double));
-        }
-        else {
+        if (ints_shellset) {
             memcpy(data,ints_shellset,n1*n2*n3*n4*sizeof(double));
         }
-        this->_bufsz = n1*n2*n3*n4;
+        else {
+            memset(data,0,n1*n2*n3*n4*sizeof(double));
+        }
+        _bufsz = n1*n2*n3*n4;
 
     }
+
     void normalize() {
-        this->engine.set(libint2::CartesianShellNormalization::uniform);
+        _engine.set(libint2::CartesianShellNormalization::uniform);
     }
 
-    auto chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, int s3, int s4, BasisSet& obs) {
+    void chunk(jlcxx::ArrayRef<int64_t> dims, int s1, int s2, int s3, int s4, const BasisSet& obs) {
         dims[0] = obs.basis[s1].size();
         dims[1] = obs.basis[s2].size();
         dims[2] = obs.basis[s3].size();
         dims[3] = obs.basis[s4].size();
     }
-    auto startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, int s3, int s4, BasisSet& obs) {
-        coords[0] = this->shell2bf[s1];
-        coords[1] = this->shell2bf[s2];
-        coords[2] = this->shell2bf[s3];
-        coords[3] = this->shell2bf[s4];
+
+    void startpoint(jlcxx::ArrayRef<int64_t> coords, int s1, int s2, int s3, int s4, const BasisSet& obs) {
+        coords[0] = shell2bf[s1];
+        coords[1] = shell2bf[s2];
+        coords[2] = shell2bf[s3];
+        coords[3] = shell2bf[s4];
     }
 
-    auto bufsz() {
-        return this->_bufsz;
+    auto bufsz() -> int {
+        return _bufsz;
     }
 
-    auto maxl() {
-        return this->_maxl;
+    auto maxl() -> int {
+        return _maxl;
     }
+
+private:
+    libint2::Engine _engine;
+    int _bufsz;
+    int _maxl;
+    std::vector<long unsigned int> shell2bf;
 };
 
 struct ERI3Engine
 {
-    int _maxl;
-    double* _data;
-    std::vector<long unsigned int> obs_shell2bf;
-    std::vector<long unsigned int> dfobs_shell2bf;
-    int _bufsz;
-    libint2::Engine engine;
-
-    ERI3Engine(int max_nprim, int max_l) {
-        this->engine = make_engine(libint2::Operator::coulomb,
-                                    max_nprim,
-                                    max_l);
-        this->engine.set(libint2::BraKet::xs_xx);
-        this->_maxl = nharms(max_l);
+    ERI3Engine(int max_nprim, int max_l) : _engine(make_engine(libint2::Operator::coulomb, max_nprim, max_l)), _bufsz(0), _maxl(ncart(max_l)) { 
+        _engine.set(libint2::BraKet::xs_xx);
     }
 
-    void init(BasisSet& obs, BasisSet& dfobs) {
-        this->obs_shell2bf = obs.basis.shell2bf();
-        this->dfobs_shell2bf = dfobs.basis.shell2bf();
+    void init(const BasisSet& obs, const BasisSet& dfobs) {
+        _obs_shell2bf = obs.basis.shell2bf();
+        _dfobs_shell2bf = dfobs.basis.shell2bf();
     }
 
-    auto compute(jlcxx::ArrayRef<double> buf, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
-        const auto& buf_vec = this->engine.results();
-        this->engine.compute(dfobs.basis[s3],obs.basis[s2],obs.basis[s1]);
+    void compute(jlcxx::ArrayRef<double> buf, int s3, int s2, int s1, const BasisSet& obs, const BasisSet& dfobs) {
+        const auto& buf_vec = _engine.results();
+        _engine.compute(dfobs.basis[s3],obs.basis[s2],obs.basis[s1]);
+        
         auto n1 = obs.basis[s1].size();
         auto n2 = obs.basis[s2].size();
         auto n3 = dfobs.basis[s3].size();
         auto ints_shellset = buf_vec[0];
         double *data = (double*)jl_array_data(buf.wrapped());
-        if (ints_shellset == nullptr) {
-            double z = 0.0;
-            memset(data,z,n1*n2*n3*sizeof(double));
-        }
-        else {
+        if (ints_shellset) {
             memcpy(data,ints_shellset,n1*n2*n3*sizeof(double));
         }
-        this->_bufsz = n1*n2*n3;
+        else {
+            memset(data,0,n1*n2*n3*sizeof(double));
+        }
+        _bufsz = n1*n2*n3;
     }
 
     void normalize() {
-        this->engine.set(libint2::CartesianShellNormalization::uniform);
+        _engine.set(libint2::CartesianShellNormalization::uniform);
     }
 
-    auto chunk(jlcxx::ArrayRef<int64_t> dims, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
+    void chunk(jlcxx::ArrayRef<int64_t> dims, int s3, int s2, int s1, const BasisSet& obs, const BasisSet& dfobs) {
         dims[0] = dfobs.basis[s3].size();
         dims[1] = obs.basis[s2].size();
         dims[2] = obs.basis[s1].size();
     }
 
-    auto startpoint(jlcxx::ArrayRef<int64_t> coords, int s3, int s2, int s1, BasisSet& obs, BasisSet& dfobs) {
-        coords[0] = this->dfobs_shell2bf[s3];
-        coords[1] = this->obs_shell2bf[s2];
-        coords[2] = this->obs_shell2bf[s1];
+    void startpoint(jlcxx::ArrayRef<int64_t> coords, int s3, int s2, int s1, const BasisSet& obs, const BasisSet& dfobs) {
+        coords[0] = _dfobs_shell2bf[s3];
+        coords[1] = _obs_shell2bf[s2];
+        coords[2] = _obs_shell2bf[s1];
     }
 
 
-    auto maxl() {
-        return this->_maxl;
+    auto maxl() const {
+        return _maxl;
     }
 
-    auto bufsz() {
-        return this->_bufsz;
+    auto bufsz() const {
+        return _bufsz;
     }
 
+private:
+    libint2::Engine _engine;
+    int _bufsz;
+    int _maxl;
+    double* _data;
+    std::vector<long unsigned int> _obs_shell2bf;
+    std::vector<long unsigned int> _dfobs_shell2bf;
 };
 
 //not ~exactly~ a one electron integral, but functions the same
 struct ERI2Engine : OEIEngine 
 {
-    ERI2Engine(int max_nprim, int max_l) {
-        this->engine = make_engine(libint2::Operator::coulomb,
-                                    max_nprim,
-                                    max_l);
-        this->engine.set(libint2::BraKet::xs_xs);
-        this->_maxl = nharms(max_l);
+    ERI2Engine(int max_nprim, int max_l) : OEIEngine(max_l, make_engine(libint2::Operator::coulomb, max_nprim, max_l)) {
+        _engine.set(libint2::BraKet::xs_xs);
     }
 };
-
-
-
-
 
 JLCXX_MODULE Libint2(jlcxx::Module& mod)
 {
